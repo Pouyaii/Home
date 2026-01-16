@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pouya AI Projects</title>
+    <meta name="description" content="Futuristic Persian Portfolio of AI and data visualization projects by Pouya.">
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            /* Palette: Deep void black, Electric Blue, and Digital Gold */
+            --bg-color: #020204;
+            --card-bg: rgba(5, 10, 15, 0.7);
+            --card-border: rgba(0, 243, 255, 0.3);
+            
+            --accent-cyan: #00f3ff;
+            --accent-gold: #ffb800; /* Persian Gold translated to neon */
+            --accent-dim: rgba(0, 243, 255, 0.1);
+            
+            --text-main: #eeeeee;
+            --text-muted: #8899a6;
+            
+            --font-display: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-display);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- PERSIAN "MANDALA" BACKGROUND PATTERN --- */
+        /* Creating a "Shamseh" (Sun/Star) Rosette pattern using CSS.
+           We stack gradients to create intersecting lines forming 8-pointed stars and circles.
+        */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-color: var(--bg-color);
+            
+            /* The Pattern Construction */
+            background-image:
+                /* 1. The Circular Rings (Mandala effect) */
+                radial-gradient(circle at center, transparent 33%, var(--accent-dim) 33.5%, transparent 34%),
+                radial-gradient(circle at center, transparent 48%, var(--accent-dim) 48.5%, transparent 49%),
+                
+                /* 2. The Diagonal Grid (X shape) */
+                linear-gradient(45deg, transparent 49.5%, var(--accent-dim) 50%, transparent 50.5%),
+                linear-gradient(-45deg, transparent 49.5%, var(--accent-dim) 50%, transparent 50.5%),
+                
+                /* 3. The Orthogonal Grid (+ shape) */
+                linear-gradient(90deg, transparent 49.5%, var(--accent-dim) 50%, transparent 50.5%),
+                linear-gradient(0deg, transparent 49.5%, var(--accent-dim) 50%, transparent 50.5%),
+                
+                /* 4. Corner Arcs to connect the tiles (Interlacing effect) */
+                radial-gradient(circle at 0% 0%, transparent 33%, var(--accent-dim) 33.5%, transparent 34%),
+                radial-gradient(circle at 100% 0%, transparent 33%, var(--accent-dim) 33.5%, transparent 34%),
+                radial-gradient(circle at 100% 100%, transparent 33%, var(--accent-dim) 33.5%, transparent 34%),
+                radial-gradient(circle at 0% 100%, transparent 33%, var(--accent-dim) 33.5%, transparent 34%);
+                
+            /* Size of the mandala tile */
+            background-size: 100px 100px; 
+            background-position: center;
+            opacity: 0.4; /* Keeping it subtle but visible */
+            pointer-events: none;
+        }
+
+        /* Ambient Glow in the center */
+        .bg-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            height: 80vh;
+            background: radial-gradient(circle, rgba(0, 243, 255, 0.05) 0%, transparent 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- HEADER --- */
+        header {
+            text-align: center;
+            padding: 5rem 1rem 3rem;
+            position: relative;
+        }
+
+        /* Cyber-Persian Typography */
+        h1 {
+            font-family: var(--font-mono);
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+            font-weight: 400;
+        }
+
+        h1 span {
+            color: var(--accent-gold); /* The "AI" is gold */
+        }
+
+        .subtitle {
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            display: inline-block;
+            border-bottom: 1px solid var(--accent-gold);
+            padding-bottom: 5px;
+        }
+
+        /* --- MAIN GRID --- */
+        main {
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Default mobile: 1 column */
+            gap: 3rem;
+            padding: 1rem;
+        }
+
+        /* Desktop: Force 2 columns for symmetry */
+        @media (min-width: 900px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* --- ARCHITECTURAL CARDS --- */
+        .card {
+            background-color: var(--card-bg);
+            /* Persian Pointed Arch shape (Ogee-ish) using clip-path */
+            /* This cuts the top corners to look like an Iwan entrance */
+            clip-path: polygon(
+                50% 0%, 
+                100% 20px, 
+                100% 100%, 
+                0% 100%, 
+                0% 20px
+            );
+            padding: 3rem 2rem 2rem; /* Extra top padding for the arch */
+            position: relative;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            border-bottom: 2px solid var(--accent-cyan); /* Only bottom border visible due to clip-path */
+        }
+
+        /* We need a pseudo-element for the border because clip-path hides standard borders */
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, var(--accent-cyan) 0%, transparent 30%);
+            opacity: 0.1;
+            z-index: -1;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background-color: rgba(15, 25, 35, 0.9);
+        }
+
+        .card:hover::before {
+            opacity: 0.3;
+        }
+
+        /* Decorative "Tile" Icon inside card */
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--accent-gold);
+            transform: rotate(45deg); /* Rhombus shape */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(255, 184, 0, 0.2);
+        }
+        
+        .card-icon-inner {
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-gold);
+            opacity: 0.8;
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-weight: 300;
+            line-height: 1.7;
+            flex-grow: 1;
+        }
+
+        /* Tech Button */
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 243, 255, 0.05);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            font-family: var(--font-mono);
+            text-decoration: none;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent-cyan);
+            letter-spacing: 4px; /* Text expansion effect */
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: auto;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .grid { gap: 2rem; padding: 0.5rem; }
+            .bg-pattern { background-size: 60px 60px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-pattern"></div>
+    <div class="bg-glow"></div>
+
+    <header>
+        <h1>Pouya <span>AI</span> Projects</h1>
+        <div class="subtitle">Digital Heritage</div>
+    </header>
+
+    <main>
+        <div class="grid">
+            
+            <!-- Geo Intel -->
+            <article class="card">
+                <div class="card-icon"><div class="card-icon-inner"></div></div>
+                <h2 class="card-title">Geo Intel</h2>
+                <p class="card-desc">
+                    Geo Intel is a dynamic mapping application that visualizes complex geopolitical and economic data. Users can explore various modes, such as the International Relations view, which details bilateral ties between all nations—including contextual explanations for their diplomatic status. The Economics view visualizes and tracks various GDP economic data for all countries. The app features many more views included ones for demographics, conflict, natural resources, world leaders, political systems and more. This is a work in progress project and may include some bugs.
+                </p>
+                <a href="https://pouyaii.github.io/" target="_blank" class="btn">Launch</a>
+            </article>
+
+            <!-- Iran Protest Map -->
+            <article class="card">
+                <div class="card-icon"><div class="card-icon-inner"></div></div>
+                <h2 class="card-title">Iran Protest Map</h2>
+                <p class="card-desc">
+                    This platform geolocates footage from recent protests in Iran, clearly distinguishing between verified and unverified sources. The application features integrated charts and an interactive timeline, allowing users to trace the eruption of unrest and analyze protest activity levels specifically before and after the implementation of state-imposed internet blackouts.
+                </p>
+                <a href="https://pouyaii.github.io/Iran/" target="_blank" class="btn">Launch</a>
+            </article>
+
+            <!-- Iran Layered -->
+            <article class="card">
+                <div class="card-icon"><div class="card-icon-inner"></div></div>
+                <h2 class="card-title">Iran Layered</h2>
+                <p class="card-desc">
+                    Iran Layered visualizes the entirety of Iranian history as a stratigraphic cross-section, with historical eras stacked as layers proportional to their duration. Drawing on the metaphor of sedimentary rock layers, this interactive experience illustrates the immense depth, longevity, and continuity of Iranian civilization.
+                </p>
+                <a href="https://pouyaii.github.io/Iran-History/" target="_blank" class="btn">Launch</a>
+            </article>
+
+            <!-- Timelines -->
+            <article class="card">
+                <div class="card-icon"><div class="card-icon-inner"></div></div>
+                <h2 class="card-title">Timelines</h2>
+                <p class="card-desc">
+                    Timelines explores the intersection of innovation and governance. By plotting major technological inventions alongside key milestones in political history, this application highlights the correlation between technological advancement and the evolution of increasingly complex political systems.
+                </p>
+                <a href="https://pouyaii.github.io/Timelines/" target="_blank" class="btn">Launch</a>
+            </article>
+
+        </div>
+    </main>
+
+    <footer>
+    </footer>
+
+</body>
+</html>
