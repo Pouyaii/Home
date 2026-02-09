@@ -57,25 +57,21 @@
         }
 
         body {
-            background-color: #000000;
+            background-color: #000000; /* Pitch Black */
             color: #FFFFFF;
             overflow-x: hidden;
             scroll-behavior: smooth;
         }
 
-        /* Ambient Background Light */
-        .ambient-glow {
+        /* --- SPACE BACKGROUND CANVAS --- */
+        #star-canvas {
             position: fixed;
             top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100vw;
-            height: 100vh;
-            background: 
-                radial-gradient(circle at 50% -20%, #1a1a2e 0%, transparent 50%),
-                radial-gradient(circle at 0% 100%, #050510 0%, transparent 40%),
-                radial-gradient(circle at 100% 100%, #050510 0%, transparent 40%);
-            z-index: -1;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2; /* Behind everything */
+            pointer-events: none;
         }
 
         /* Shimmer Text Effect */
@@ -94,20 +90,20 @@
 
         /* Bento Card Styles */
         .bento-card {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(20, 20, 20, 0.15); /* Increased translucency from 0.4 to 0.15 */
             /* Default variables, overridden inline per card */
             --border-color: rgba(255, 255, 255, 0.08);
             --glow-color: rgba(255, 255, 255, 0.1);
             
             border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(8px); /* Reduced blur slightly to show stars better */
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
             position: relative;
             overflow: hidden;
         }
 
         .bento-card:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(30, 30, 30, 0.25); /* More translucent hover state */
             border-color: var(--border-color);
             transform: translateY(-4px);
             box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
@@ -166,8 +162,9 @@
 </head>
 <body class="selection:bg-brand-accent selection:text-white">
 
-    <div class="ambient-glow"></div>
-
+    <!-- The Starfield Canvas -->
+    <canvas id="star-canvas"></canvas>
+    
     <!-- Navigation -->
     <nav class="fixed top-0 w-full z-50 px-6 py-6 flex flex-col md:flex-row justify-between items-center backdrop-blur-md border-b border-white/5 gap-4 md:gap-0">
         <div class="flex items-center gap-8 w-full md:w-auto justify-between md:justify-start">
@@ -213,7 +210,7 @@
                 Digital Heritage & Intelligence
             </div>
             
-            <!-- Updated h1 with leading-tight and pb-4 to fix 'y' cropping -->
+            <!-- Title -->
             <h1 class="text-6xl md:text-9xl font-display font-medium tracking-tight mb-8 leading-tight pb-4 text-shimmer">
                 Pouya AI
             </h1>
@@ -384,6 +381,201 @@
     </main>
 
     <script>
+        // --- Starfield Engine with Warp Drive & Shooting Stars ---
+        const canvas = document.getElementById('star-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let stars = [];
+        let shootingStars = [];
+
+        // Configuration
+        const STAR_COUNT = 500;
+        const BASE_STAR_SPEED = 15; // Base Speed of travel (z-axis) at top of page
+        let currentStarSpeed = BASE_STAR_SPEED;
+        
+        // Resize Canvas
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // Scroll Speed Handler
+        function handleScroll() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            // Calculate scroll percentage (0 to 1)
+            const scrollPercent = docHeight > 0 ? Math.min(Math.max(scrollTop / docHeight, 0), 1) : 0;
+            
+            // Speed reduces by ~33% at bottom (Factor goes from 1.0 to 0.66)
+            currentStarSpeed = BASE_STAR_SPEED * (1 - (scrollPercent * 0.34));
+        }
+
+        window.addEventListener('scroll', handleScroll);
+
+        // 3D Star Class (Travel Effect)
+        class Star {
+            constructor() {
+                this.reset(true);
+            }
+
+            reset(initial = false) {
+                // Random position centered on screen
+                this.x = Math.random() * width - width / 2;
+                this.y = Math.random() * height - height / 2;
+                // Depth: if initial, random depth 0 to width. If reset, start far away (width)
+                this.z = initial ? Math.random() * width : width;
+                
+                // Realistic Subtle Star Colors
+                const tints = [
+                    '255, 255, 255', // Pure White
+                    '220, 240, 255', // Light Blue (O-type/B-type)
+                    '255, 240, 220', // Pale Yellow (G-type like Sun)
+                    '255, 220, 220', // Soft Red (M-type)
+                    '255, 230, 200'  // Light Orange (K-type)
+                ];
+                // 80% chance for white, 20% for tint
+                this.color = Math.random() > 0.8 ? tints[Math.floor(Math.random() * tints.length)] : '255, 255, 255';
+            }
+
+            update() {
+                this.z = this.z - currentStarSpeed;
+                
+                if (this.z < 1) {
+                    this.reset(false);
+                }
+            }
+
+            draw() {
+                // Perspective projection: x = x / z
+                const sx = (this.x / this.z) * width + width / 2;
+                const sy = (this.y / this.z) * height + height / 2;
+
+                // Radius grows as star gets closer
+                const r = (1 - this.z / width) * 2.5;
+
+                // Opacity fades in as it gets closer
+                const alpha = (1 - this.z / width);
+
+                ctx.fillStyle = `rgba(${this.color}, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy, Math.max(0, r), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Shooting Star Class
+        class ShootingStar {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.len = Math.random() * 80 + 10;
+                this.speed = Math.random() * 10 + 10;
+                this.size = Math.random() * 1 + 0.1;
+                
+                // Random Direction (Any angle)
+                const angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * this.speed;
+                this.vy = Math.sin(angle) * this.speed;
+
+                this.active = false;
+                // Make them rarer: Wait between 5 to 15 seconds
+                this.waitTime = new Date().getTime() + Math.random() * 10000 + 5000;
+            }
+
+            update() {
+                if (this.active) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Reset if off screen (with some buffer)
+                    if (this.x < -100 || this.x > width + 100 || this.y < -100 || this.y > height + 100) {
+                        this.active = false;
+                        this.waitTime = new Date().getTime() + Math.random() * 10000 + 5000;
+                    }
+                } else {
+                    if (new Date().getTime() > this.waitTime) {
+                        this.active = true;
+                        // Respawn somewhere random
+                        this.x = Math.random() * width;
+                        this.y = Math.random() * height;
+                        // Recalculate random direction on respawn
+                        const angle = Math.random() * Math.PI * 2;
+                        this.vx = Math.cos(angle) * this.speed;
+                        this.vy = Math.sin(angle) * this.speed;
+                    }
+                }
+            }
+
+            draw() {
+                if (!this.active) return;
+                
+                // Calculate tail end position based on velocity vector
+                const tailX = this.x - (this.vx / this.speed) * this.len;
+                const tailY = this.y - (this.vy / this.speed) * this.len;
+
+                // Create gradient tail fading to transparent
+                const gradient = ctx.createLinearGradient(this.x, this.y, tailX, tailY);
+                gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+                gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = this.size;
+                ctx.lineCap = "round";
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(tailX, tailY);
+                ctx.stroke();
+            }
+        }
+
+        // Initialize Objects
+        function init() {
+            stars = [];
+            shootingStars = [];
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push(new Star());
+            }
+            // Add a few shooting stars instances
+            for (let i = 0; i < 2; i++) {
+                shootingStars.push(new ShootingStar());
+            }
+        }
+
+        // Animation Loop
+        function animate() {
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            shootingStars.forEach(sStar => {
+                sStar.update();
+                sStar.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Setup Event Listeners
+        window.addEventListener('resize', () => {
+            resize();
+            init();
+        });
+        
+        resize();
+        init();
+        animate();
+
         // --- Card Mouse Tracking (Bento Glow) ---
         const cards = document.querySelectorAll('.bento-card');
         
