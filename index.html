@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pouya AI | Digital Heritage & Intelligence</title>
+    <link rel="icon" href="assets/media/blackholes-poster.jpg" type="image/jpeg">
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
@@ -12,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="assets/css/tailwind.css">
-    <link rel="stylesheet" href="assets/css/portfolio.css?v=20260523f">
+    <link rel="stylesheet" href="assets/css/portfolio.css?v=20260523g">
 </head>
 <body>
     <svg class="liquid-defs" aria-hidden="true">
@@ -79,15 +80,17 @@
             <p class="mt-2 text-[11px] leading-5 text-white/42">Hotkeys: H editor, hold V to show and scroll the page while tools stay open, W/E/R tools, Delete remove, Ctrl+Z/Y undo/redo, Shift while scaling for uniform scale, Esc exit.</p>
         </div>
 
-        <div class="hud-section">
+        <details class="hud-section hud-collapse" open>
+            <summary>Objects <i class="ph ph-stack" aria-hidden="true"></i></summary>
             <div class="mb-2 flex items-center justify-between">
                 <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Objects</div>
                 <button id="refresh-objects-btn" class="hud-button !min-h-7 !px-2" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></button>
             </div>
             <div id="object-list" class="object-list"></div>
-        </div>
+        </details>
 
-        <div class="hud-section">
+        <details class="hud-section hud-collapse" open>
+            <summary>Transform <i class="ph ph-arrows-out-cardinal" aria-hidden="true"></i></summary>
             <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Transform</div>
             <div class="inspector-grid">
                 <span>Pos</span>
@@ -103,9 +106,10 @@
                 <input class="hud-input transform-input" data-transform="scale" data-axis="y" type="number" step="0.05">
                 <input class="hud-input transform-input" data-transform="scale" data-axis="z" type="number" step="0.05">
             </div>
-        </div>
+        </details>
 
-        <div class="hud-section">
+        <details class="hud-section hud-collapse">
+            <summary>Scene save <i class="ph ph-floppy-disk" aria-hidden="true"></i></summary>
             <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Scene Save</div>
             <div class="scene-hud-row two">
                 <button id="save-browser-btn" class="hud-button" type="button"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Save</button>
@@ -117,12 +121,13 @@
                 <label for="setting-load-file" class="hud-file"><i class="ph ph-upload" aria-hidden="true"></i>Load Config</label>
                 <input id="setting-load-file" type="file" accept="application/json,.json">
             </div>
-        </div>
+        </details>
 
-        <div class="hud-section">
+        <details class="hud-section hud-collapse">
+            <summary>Camera animation <i class="ph ph-video-camera" aria-hidden="true"></i></summary>
             <div class="mb-2 flex items-center justify-between">
                 <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Camera Animation</div>
-                <label class="flex items-center gap-2 text-[11px] text-white/60"><input id="scroll-sync-toggle" type="checkbox"> Scroll sync</label>
+                <label class="flex items-center gap-2 text-[11px] text-white/60"><input id="scroll-sync-toggle" type="checkbox" checked> Scroll sync</label>
             </div>
             <div class="scene-hud-row two">
                 <button id="camera-keyframe-btn" class="hud-button" type="button"><i class="ph ph-plus-circle" aria-hidden="true"></i>Keyframe</button>
@@ -135,7 +140,7 @@
                 <option value="smooth">Smooth ease</option>
                 <option value="linear">Linear</option>
                 <option value="cinematic">Cinematic ease</option>
-                <option value="smooth-flow">Smooth flow spline</option>
+                <option value="smooth-flow" selected>Smooth flow spline</option>
             </select>
             <div class="mt-2 grid grid-cols-[auto_1fr_auto] items-center gap-2 text-[11px] text-white/56">
                 <button id="camera-pause-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-pause" aria-hidden="true"></i></button>
@@ -152,7 +157,7 @@
             </div>
             <select id="camera-sequence-select" class="hud-select mt-2" aria-label="Saved camera sequences"></select>
             <div id="camera-keyframe-list" class="mt-2 grid gap-1 text-[11px] text-white/52"></div>
-        </div>
+        </details>
 
         <div class="hud-section">
             <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Visual Settings</div>
@@ -243,11 +248,12 @@
                 <div class="settings-grid">
                     <label for="setting-quality-preset">Quality</label>
                     <select id="setting-quality-preset" class="hud-select live-setting" data-setting="qualityPreset">
+                        <option value="auto" selected>Auto</option>
                         <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
+                        <option value="medium">Medium</option>
                         <option value="cinematic">Cinematic</option>
                     </select>
-                    <span class="setting-value" data-value-for="qualityPreset">medium</span>
+                    <span class="setting-value" data-value-for="qualityPreset">auto</span>
                     <label for="setting-global-illumination">Global illum.</label>
                     <input id="setting-global-illumination" class="live-setting" data-setting="globalIllumination" type="checkbox">
                     <span class="setting-value" data-value-for="globalIllumination">off</span>
@@ -279,8 +285,8 @@
                     <input id="setting-lamp-glow" class="hud-range live-setting" data-setting="lampGlow" type="range" min="0" max="4" step="0.05" value="2.4">
                     <span class="setting-value" data-value-for="lampGlow">2.40</span>
                     <label for="setting-blackhole-nonorbit">Hero video</label>
-                    <input id="setting-blackhole-nonorbit" class="live-setting" data-setting="blackholeNonOrbit" type="checkbox">
-                    <span class="setting-value" data-value-for="blackholeNonOrbit">orbit</span>
+                    <input id="setting-blackhole-nonorbit" class="live-setting" data-setting="blackholeNonOrbit" type="checkbox" checked>
+                    <span class="setting-value" data-value-for="blackholeNonOrbit">non-orbit</span>
                 </div>
             </details>
 
@@ -299,11 +305,14 @@
                     </select>
                     <span class="setting-value" data-value-for="projectFontPreset">playfair</span>
                     <label for="setting-project-title-size">Title size</label>
-                    <input id="setting-project-title-size" class="hud-range live-setting" data-setting="projectTitleSize" type="range" min="18" max="96" step="1" value="37">
+                    <input id="setting-project-title-size" class="hud-range live-setting" data-setting="projectTitleSize" type="range" min="6" max="96" step="1" value="37">
                     <span class="setting-value" data-value-for="projectTitleSize">37</span>
                     <label for="setting-project-body-size">Body size</label>
-                    <input id="setting-project-body-size" class="hud-range live-setting" data-setting="projectBodySize" type="range" min="9" max="24" step="1" value="17">
+                    <input id="setting-project-body-size" class="hud-range live-setting" data-setting="projectBodySize" type="range" min="5" max="24" step="1" value="17">
                     <span class="setting-value" data-value-for="projectBodySize">17</span>
+                    <label for="setting-project-text-gap">Title/body gap</label>
+                    <input id="setting-project-text-gap" class="hud-range live-setting" data-setting="projectTextGap" type="range" min="4" max="140" step="1" value="22">
+                    <span class="setting-value" data-value-for="projectTextGap">22</span>
                     <label for="setting-project-width">Text width</label>
                     <input id="setting-project-width" class="hud-range live-setting" data-setting="projectTextWidth" type="range" min="340" max="720" step="10" value="500">
                     <span class="setting-value" data-value-for="projectTextWidth">500</span>
@@ -360,8 +369,8 @@
                     <input id="setting-particle-spread" class="hud-range live-setting" data-setting="particleSpread" type="range" min="0.25" max="2.2" step="0.05" value="1">
                     <span class="setting-value" data-value-for="particleSpread">1.00</span>
                     <label for="setting-particle-size">Particle size</label>
-                    <input id="setting-particle-size" class="hud-range live-setting" data-setting="particleSize" type="range" min="0.01" max="0.2" step="0.001" value="0.2">
-                    <span class="setting-value" data-value-for="particleSize">0.200</span>
+                    <input id="setting-particle-size" class="hud-range live-setting" data-setting="particleSize" type="range" min="0.005" max="0.2" step="0.001" value="0.02">
+                    <span class="setting-value" data-value-for="particleSize">0.020</span>
                     <label for="setting-particle-shape">Shape pull</label>
                     <input id="setting-particle-shape" class="hud-range live-setting" data-setting="particleShapeAttraction" type="range" min="0" max="1.4" step="0.05" value="0.85">
                     <span class="setting-value" data-value-for="particleShapeAttraction">0.85</span>
@@ -374,6 +383,18 @@
                     <label for="setting-screen-saturation">Screen color</label>
                     <input id="setting-screen-saturation" class="hud-range live-setting" data-setting="screenSaturation" type="range" min="0" max="2" step="0.01" value="1.63">
                     <span class="setting-value" data-value-for="screenSaturation">1.63</span>
+                    <label for="setting-screen-rgb">RGB TV</label>
+                    <input id="setting-screen-rgb" class="hud-range live-setting" data-setting="screenRgbEffect" type="range" min="0" max="1" step="0.01" value="0.72">
+                    <span class="setting-value" data-value-for="screenRgbEffect">0.72</span>
+                    <label for="setting-screen-scanline">Scanlines</label>
+                    <input id="setting-screen-scanline" class="hud-range live-setting" data-setting="screenScanline" type="range" min="0" max="1" step="0.01" value="0.48">
+                    <span class="setting-value" data-value-for="screenScanline">0.48</span>
+                    <label for="setting-ambient-particles">Ambient dust</label>
+                    <input id="setting-ambient-particles" class="hud-range live-setting" data-setting="ambientParticleAmount" type="range" min="0" max="1000" step="25" value="220">
+                    <span class="setting-value" data-value-for="ambientParticleAmount">220</span>
+                    <label for="setting-ambient-particle-size">Dust size</label>
+                    <input id="setting-ambient-particle-size" class="hud-range live-setting" data-setting="ambientParticleSize" type="range" min="0.004" max="0.08" step="0.001" value="0.018">
+                    <span class="setting-value" data-value-for="ambientParticleSize">0.018</span>
                 </div>
             </details>
             <details class="hud-details">
@@ -462,7 +483,7 @@
                             <p class="project-copy">
                                 GeoIntel Interactive is a geopolitical intelligence platform that turns global affairs data into an explorable map-based interface. The project brings together international relations, economic indicators, political systems, demographics, conflicts, strategic assets, natural resources, critical infrastructure, world leaders, and emerging AI capabilities into one interactive environment. Users can switch between thematic views, compare countries, inspect bilateral relationships, and explore how geography, power, resources, and institutions overlap. It is designed as both a data visualization experiment and a prototype for a more intuitive way to study the world.
                             </p>
-                            <a href="https://pouyaii.github.io/" target="_blank" class="liquid-action liquid-glass">Launch Geo Intel <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                            <a href="https://pouyaii.github.io/" target="_blank" class="liquid-action liquid-glass">Launch Geointel <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                         </article>
 
                         <article class="projection-panel iran liquid-glass" data-project-card="iran">
@@ -480,7 +501,7 @@
                             <p class="project-copy">
                                 History of Iran Layered reimagines Iranian history as a geological cross-section, with dynasties and eras stacked like sedimentary layers across time. Beginning with ancient Proto-Elamite civilization and continuing into the Islamic Republic, the project uses proportional visual layers to show the extraordinary depth, continuity, rupture, and recurrence within Iranian civilization. Users can zoom, pan, adjust labels, toggle flags, and compare overlapping periods of rule. It is part historical timeline, part digital heritage artwork, and part experiment in making long civilizational history physically intuitive.
                             </p>
-                            <a href="#" class="liquid-action liquid-glass">Preview Concept <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                            <a href="https://pouyaii.github.io/Iran-History/" target="_blank" class="liquid-action liquid-glass">Preview Concept <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                         </article>
 
                         <article class="projection-panel timeline liquid-glass" data-project-card="timeline">
@@ -489,7 +510,10 @@
                             <p class="project-copy">
                                 The Tech & Politics Timeline explores how technological change and political order evolve beside each other. By placing major inventions, scientific breakthroughs, communications systems, weapons, institutions, revolutions, and governance milestones onto a shared historical timeline, the project visualizes the long relationship between innovation and political complexity. Its core idea is that technology does not simply advance society, it repeatedly forces political systems to adapt, lag behind, or break. The result is a broad interactive map of civilization's recurring struggle to govern new forms of power.
                             </p>
-                            <a href="#" class="liquid-action liquid-glass">Preview Timeline <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                            <div class="project-actions">
+                                <a href="https://pouyaii.github.io/Timelines/" target="_blank" class="liquid-action liquid-glass">Preview Timeline <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                                <button id="hourglass-flip-btn" class="liquid-action liquid-glass icon-action" type="button" aria-label="Flip hourglass"><i class="ph ph-hourglass-high" aria-hidden="true"></i><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></button>
+                            </div>
                         </article>
 
                         <article class="projection-panel animations liquid-glass" data-project-card="animations">
@@ -505,27 +529,22 @@
             </div>
         </section>
 
-        <section id="about" class="content-band">
-            <div class="mx-auto max-w-7xl reveal">
-                <div class="about-rule mb-12"></div>
-                <div class="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-center">
-                    <div>
-                        <div class="section-kicker mb-3">About</div>
-                        <h2 class="font-display text-4xl font-semibold tracking-normal md:text-6xl">Interactive digital projects for research, history, and global affairs.</h2>
-                    </div>
-                    <div class="grid gap-6 text-base leading-8 text-white/58">
-                        <p>
-                            I build interactive digital projects that combine art, politics, history, data visualization, design, and AI-assisted software creation. My work focuses on turning complex ideas into explorable visual experiences, from geopolitical mapping tools and historical timelines to cinematic AI animations and experimental web interfaces.
-                        </p>
-                        <p>
-                            These applications represent a journey into AI-driven storytelling and interactive web experiences. By leveraging modern web technologies and AI, software can increasingly be created on demand around specific ideas, questions, and creative visions. Instead of being limited to static articles, videos, or dashboards, new tools make it possible to build custom digital experiences that let users explore information directly.
-                        </p>
-                        <p>
-                            This portfolio is an ongoing experiment in that new generation of software: using AI, code, design, and visual art to make research, history, and global affairs more intuitive, immersive, and alive.
-                        </p>
-                    </div>
-                </div>
-                <div class="about-rule mt-12"></div>
+        <section id="about" class="content-band about-scroll-band">
+            <video id="about-blackhole-video" class="about-background-video" muted playsinline preload="auto" poster="assets/media/blackholes-poster.jpg">
+                <source src="assets/media/blackholes-scrub-1080p.mp4" media="(min-width: 900px)" type="video/mp4">
+                <source src="assets/media/blackholes-scrub-720p.mp4" type="video/mp4">
+            </video>
+            <div class="about-scroll-copy mx-auto max-w-7xl">
+                <article class="about-panel liquid-glass" data-about-panel="0">
+                    <div class="section-kicker mb-3">About</div>
+                    <p>I build interactive digital projects that combine art, politics, history, data visualization, design, and AI-assisted software creation. My work focuses on turning complex ideas into explorable visual experiences, from geopolitical mapping tools and historical timelines to cinematic AI animations and experimental web interfaces.</p>
+                </article>
+                <article class="about-panel liquid-glass" data-about-panel="1">
+                    <p>These applications represent a journey into AI-driven storytelling and interactive web experiences. By leveraging modern web technologies and AI, software can increasingly be created on demand around specific ideas, questions, and creative visions. Instead of being limited to static articles, videos, or dashboards, new tools make it possible to build custom digital experiences that let users explore information directly.</p>
+                </article>
+                <article class="about-panel liquid-glass" data-about-panel="2">
+                    <p>This portfolio is an ongoing experiment in that new generation of software: using AI, code, design, and visual art to make research, history, and global affairs more intuitive, immersive, and alive. It is also a living workspace for testing how cinematic media, spatial interfaces, data, and historical imagination can merge into custom software that feels built around a specific idea rather than squeezed into a generic format.</p>
+                </article>
             </div>
         </section>
 
@@ -585,20 +604,21 @@
                 large: "assets/media/blackholes-2160p.mp4"
             },
             nonOrbit: {
-                small: "assets/media/blackholes-non-orbit-2160p.mp4",
-                medium: "assets/media/blackholes-non-orbit-2160p.mp4",
-                large: "assets/media/blackholes-non-orbit-2160p.mp4"
+                small: "assets/media/blackholes-non-orbit-720p.mp4",
+                medium: "assets/media/blackholes-non-orbit-1080p.mp4",
+                large: "assets/media/blackholes-non-orbit-1080p.mp4"
             }
         };
 
         function chooseVideoSource() {
-            const useNonOrbit = localStorage.getItem("pouya-ai-blackhole-nonorbit") === "true";
+            const useNonOrbit = localStorage.getItem("pouya-ai-blackhole-nonorbit") !== "false";
             const profiles = useNonOrbit ? videoProfiles.nonOrbit : videoProfiles.orbit;
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const saveData = Boolean(connection && connection.saveData);
             const viewportScore = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
             const deviceMemory = navigator.deviceMemory || 8;
-            if (saveData || deviceMemory <= 3 || viewportScore < 1100) return profiles.small;
+            const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+            if (saveData || coarsePointer || deviceMemory <= 3 || viewportScore < 1100) return profiles.small;
             if (deviceMemory <= 5 || viewportScore < 2300) return profiles.medium;
             return profiles.large;
         }
@@ -713,6 +733,6 @@
         }, { passive: true });
     </script>
 
-    <script type="module" src="assets/js/portfolio-scene.js?v=20260523g"></script>
+    <script type="module" src="assets/js/portfolio-scene.js?v=20260523i"></script>
 </body>
 </html>

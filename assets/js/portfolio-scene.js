@@ -56,6 +56,7 @@
         const projectCards = [...document.querySelectorAll("[data-project-card]")];
         const projectTextTarget = document.querySelector("#project-text-target");
         const projectDescriptionEditor = document.querySelector("#project-description-editor");
+        const hourglassFlipBtn = document.querySelector("#hourglass-flip-btn");
         const videoControls = document.querySelector("#projection-video-controls");
         const videoPrevBtn = document.querySelector("#projection-video-prev");
         const videoAudioBtn = document.querySelector("#projection-video-audio");
@@ -63,6 +64,7 @@
         const videoNextBtn = document.querySelector("#projection-video-next");
         const heartBurst = document.querySelector("#heart-burst");
         const titleFallback = document.querySelector("#title-fallback");
+        const aboutVideo = document.querySelector("#about-blackhole-video");
         const panelDisplacement = document.querySelector("#liquid-panel-displacement");
         const lensDisplacement = document.querySelector("#liquid-lens-displacement");
 
@@ -77,24 +79,17 @@
             const memory = navigator.deviceMemory || 4;
             const pixels = window.innerWidth * window.innerHeight;
             const highPixelViewport = pixels > 1920 * 1080;
-            const quality = visualSettings?.qualityPreset || "medium";
-            const qualityCap = quality === "low" ? 1.1 : quality === "cinematic" ? 2 : 1.6;
+            const quality = effectiveQualityPreset();
+            const qualityCap = quality === "low" ? 1.1 : quality === "cinematic" ? 2 : 1.45;
             const deviceCap = memory >= 8 && !highPixelViewport ? 2 : memory <= 4 || highPixelViewport ? 1.5 : 1.75;
             const cap = Math.min(qualityCap, deviceCap);
             return Math.max(1, Math.min(dpr, cap));
         }
 
         function chooseAnimationProfile() {
-            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            const viewportScore = Math.max(window.innerWidth, window.innerHeight) * preferredPixelRatio();
-            const saveData = Boolean(connection?.saveData);
-            const reducedNetwork = ["slow-2g", "2g", "3g"].includes(connection?.effectiveType);
-            const memory = navigator.deviceMemory || 4;
-            if (visualSettings?.qualityPreset === "low") return "480p";
-            if (visualSettings?.qualityPreset === "medium") return viewportScore < 1500 || memory <= 4 ? "480p" : "720p";
-            if (saveData || reducedNetwork || memory <= 3 || viewportScore < 1050) return "480p";
-            if (memory <= 6 || viewportScore < 1900) return "720p";
-            return "1080p";
+            const quality = effectiveQualityPreset();
+            if (quality === "cinematic") return window.innerWidth > 1400 && (navigator.deviceMemory || 4) >= 8 ? "1080p" : "720p";
+            return "480p";
         }
 
         const modelPaths = {
@@ -114,23 +109,41 @@
             { title: "Persepolis", stem: "animation-persepolis" },
             { title: "Ghibli Iran", stem: "animation-ghibli-iran" },
             { title: "Sassanid Persia", stem: "animation-sassanid-persia" },
-            { title: "Farshchian Animation", stem: "animation-farshchian" }
+            { title: "Farshchian Animation", stem: "animation-farshchian" },
+            { title: "Liberation of Babylon", stem: "animation-liberation-babylon", only480: true },
+            { title: "Rome", stem: "animation-rome", only480: true }
         ];
 
         function animationVideoSource(video) {
-            return `assets/media/${video.stem}-${chooseAnimationProfile()}.mp4`;
+            return `assets/media/${video.stem}-${video.only480 ? "480p" : chooseAnimationProfile()}.mp4`;
         }
 
         const animationVideoPreloaders = [];
 
-        function preloadAnimationVideos() {
+        function effectiveQualityPreset() {
+            const requested = visualSettings?.qualityPreset || "auto";
+            if (requested !== "auto") return requested;
+            const memory = navigator.deviceMemory || 4;
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const reducedNetwork = Boolean(connection?.saveData) || ["slow-2g", "2g", "3g"].includes(connection?.effectiveType);
+            const coarse = window.matchMedia("(pointer: coarse)").matches;
+            if (reducedNetwork || memory <= 4 || coarse || window.innerWidth < 760) return "low";
+            if (memory >= 8 && window.innerWidth >= 1280) return "medium";
+            return "low";
+        }
+
+        function preloadAnimationVideos(centerIndex = currentAnimationIndex || 0) {
             animationVideoPreloaders.length = 0;
-            animationVideos.forEach((video) => {
+            document.querySelectorAll("link[data-animation-preload]").forEach((link) => link.remove());
+            const wanted = new Set([centerIndex, (centerIndex + 1) % animationVideos.length, (centerIndex + 2) % animationVideos.length]);
+            [...wanted].forEach((index) => {
+                const video = animationVideos[index];
                 const source = animationVideoSource(video);
                 const link = document.createElement("link");
                 link.rel = "preload";
                 link.as = "video";
                 link.href = source;
+                link.dataset.animationPreload = "true";
                 document.head.appendChild(link);
                 const preloader = document.createElement("video");
                 preloader.muted = true;
@@ -184,14 +197,15 @@
             backgroundColor: "#000000",
             backgroundAlpha: 1,
             lampGlow: 2.4,
-            qualityPreset: "medium",
+            qualityPreset: "auto",
             projectGlassPlane: window.matchMedia("(max-width: 760px)").matches ? false : true,
             projectFontPreset: "playfair",
             projectTitleSize: 37,
             projectBodySize: 17,
+            projectTextGap: 22,
             projectTextWidth: 500,
             projectTextRotateY: 13,
-            blackholeNonOrbit: false,
+            blackholeNonOrbit: true,
             selectedProject: "geo",
             hologramColor: "#61f5ff",
             hologramOpacity: 0.58,
@@ -200,11 +214,15 @@
             particleOpacity: 0.82,
             particleSpeed: 1,
             particleSpread: 1,
-            particleSize: 0.2,
+            particleSize: 0.02,
             particleShapeAttraction: 0.85,
             screenOpacity: 0.42,
             screenBrightness: 1.3,
             screenSaturation: 1.63,
+            screenRgbEffect: 0.72,
+            screenScanline: 0.48,
+            ambientParticleAmount: 220,
+            ambientParticleSize: 0.018,
             carpetIntensity: 1,
             carpetAmplitude: 0.22,
             carpetWavelength: 2.55,
@@ -287,6 +305,7 @@
         const composer = postProcessingEnabled ? new EffectComposer(renderer) : null;
         let bloomPass = null;
         let chromaticPass = null;
+        let useComposerRender = false;
         if (composer) {
             composer.setPixelRatio(preferredPixelRatio());
             composer.setSize(window.innerWidth, window.innerHeight);
@@ -365,6 +384,7 @@
 
         const selectableObjects = [];
         const editableObjects = [];
+        const multiSelectedObjects = new Set();
         const assetObjects = new Map();
         const projectObjects = new Map(projectKeys.map((key) => [key, []]));
         const interactiveProjectionRoots = new Set();
@@ -372,11 +392,13 @@
         const actionStack = [];
         const redoStack = [];
         const cameraKeyframes = [];
+        const defaultCameraKeyframes = [{"time":0,"project":"geo","position":[-1.3388356455678396,2.318299550152833,7.757070538703596],"target":[1.7800000000000002,0.5468,0.047200000000000006]},{"time":0.09712230215827339,"project":"geo","position":[3.5577044357761505,1.8077719926915148,9.213676774938596],"target":[1.7800000000000002,0.5468,0.047200000000000006]},{"time":0.2302158273381295,"project":"iran","position":[6.475943857541054,2.148476733207479,-5.789316327895974],"target":[2.6653201149928134,0.5507657557824456,0.6914155352357116]},{"time":0.3105515587529976,"project":"iran","position":[-3.9758131077091257,2.2792940757538327,-3.669673191694088],"target":[2.7440438274587935,0.77511288612861,-0.16393790555797638]},{"time":0.387,"project":"history","position":[-3.048295183166745,1.5897251292444605,4.410159494275501],"target":[2.8318531944421994,1.0253523487143392,-1.1180093261052388]},{"time":0.592,"project":"timeline","position":[5.908335597003093,5.772866705867747,-1.6057663738759864],"target":[2.0051865772202566,1.77202907047011,0.5176366684245781]},{"time":0.6966426858513189,"project":"timeline","position":[-5.587973029527567,3.4601515089094965,-8.1517279614401],"target":[2.0051865772202566,1.77202907047011,0.5176366684245781]},{"time":0.7577937649880095,"project":"timeline","position":[-7.757096960455764,3.342787609231923,6.700543818986134],"target":[1.6738873484695593,1.788869991029308,0.04429951255453572]},{"time":0.8405275779376499,"project":"animations","position":[1.092017159632582,3.9791507065310325,9.526161669786013],"target":[1.1641208046317293,2.2926366858410514,0.19060862308492743]},{"time":0.994,"project":"animations","position":[17.338368238461996,2.236206461366132,9.771657016464822],"target":[1.3193382350701885,1.2689991671523897,0.6068869711346812]}];
         let selectedObject = null;
         let snapEnabled = false;
         let sceneMode = false;
         let settingsOpen = false;
         let transformStart = null;
+        let transformDragging = false;
         let shiftDown = false;
         let cameraPlaying = false;
         let cameraPlayStart = 0;
@@ -389,6 +411,7 @@
         let pointerCurrent = { x: 0, y: 0 };
         let hoverPulse = 0;
         let scenePageVisible = false;
+        let sceneLayoutPreview = false;
         let projectionFloat = 0;
         let projectionExitProgress = 0;
         let cameraIntroProgress = 0;
@@ -405,6 +428,13 @@
         let grabLastX = 0;
         let grabLastY = 0;
         let grabLastTime = 0;
+        const grabMovePlane = new THREE.Plane();
+        const grabMoveWorld = new THREE.Vector3();
+        const grabLastPosition = new THREE.Vector3();
+        const lampDefaultPosition = new THREE.Vector3(2.55, -0.76, 0.45);
+        const lampProjectionOffset = new THREE.Vector3();
+        const lampProjectionOffsetTarget = new THREE.Vector3();
+        let multiTransformStart = null;
         let selectedCameraKeyframe = -1;
         let cameraThirdPerson = false;
         let currentAnimationIndex = 0;
@@ -969,7 +999,9 @@
         }
 
         function updateChromaticCssPalette() {
-            const target = currentEnvironmentOpacity < 0.08 ? paletteForProject("hero") : blendedProjectPalette();
+            const aboutRect = document.querySelector("#about")?.getBoundingClientRect();
+            const aboutVisible = aboutRect && aboutRect.top < window.innerHeight * 0.78 && aboutRect.bottom > window.innerHeight * 0.12;
+            const target = currentEnvironmentOpacity < 0.08 || aboutVisible ? paletteForProject("hero") : blendedProjectPalette();
             chromaticPaletteState.forEach((color, index) => {
                 color.lerp(target[index], 0.045);
                 document.documentElement.style.setProperty(`--chromatic-${["a", "b", "c"][index]}`, colorToRgbTriplet(color));
@@ -1070,6 +1102,31 @@
         flowParticles.name = "Lamp Spout Hologram Particles";
         projectionStage.add(flowParticles);
 
+        const ambientParticleCount = 1000;
+        const ambientParticleGeometry = new THREE.BufferGeometry();
+        const ambientParticlePositions = new Float32Array(ambientParticleCount * 3);
+        const ambientParticleColors = new Float32Array(ambientParticleCount * 3);
+        const ambientParticleSeeds = [];
+        for (let i = 0; i < ambientParticleCount; i += 1) {
+            ambientParticlePositions[i * 3] = (Math.random() - 0.5) * 10;
+            ambientParticlePositions[i * 3 + 1] = -0.4 + Math.random() * 4.2;
+            ambientParticlePositions[i * 3 + 2] = (Math.random() - 0.5) * 5.5;
+            ambientParticleSeeds.push({ x: ambientParticlePositions[i * 3], y: ambientParticlePositions[i * 3 + 1], z: ambientParticlePositions[i * 3 + 2], phase: Math.random() * Math.PI * 2 });
+        }
+        ambientParticleGeometry.setAttribute("position", new THREE.BufferAttribute(ambientParticlePositions, 3));
+        ambientParticleGeometry.setAttribute("color", new THREE.BufferAttribute(ambientParticleColors, 3));
+        const ambientParticleMaterial = new THREE.PointsMaterial({
+            size: 0.018,
+            transparent: true,
+            opacity: 0.36,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const ambientParticles = new THREE.Points(ambientParticleGeometry, ambientParticleMaterial);
+        ambientParticles.name = "Ambient Chromatic Dust";
+        projectionStage.add(ambientParticles);
+
         const projectionVideo = document.createElement("video");
         projectionVideo.muted = true;
         projectionVideo.loop = false;
@@ -1123,6 +1180,8 @@
                 uOpacity: { value: visualSettings.screenOpacity },
                 uBrightness: { value: visualSettings.screenBrightness },
                 uSaturation: { value: visualSettings.screenSaturation },
+                uRgbEffect: { value: visualSettings.screenRgbEffect },
+                uScanline: { value: visualSettings.screenScanline },
                 uTint: { value: new THREE.Color(0xe8fbff) }
             },
             vertexShader: `
@@ -1141,6 +1200,8 @@
                 uniform float uOpacity;
                 uniform float uBrightness;
                 uniform float uSaturation;
+                uniform float uRgbEffect;
+                uniform float uScanline;
                 uniform vec3 uTint;
 
                 vec4 sampleSlide(sampler2D source, vec2 uv) {
@@ -1160,7 +1221,14 @@
                     vec4 currentFrame = sampleSlide(uCurrent, currentUv);
                     vec4 nextFrame = sampleSlide(uNext, nextUv);
                     vec4 frame = currentFrame + nextFrame;
-                    gl_FragColor = vec4(grade(frame.rgb), frame.a * uOpacity);
+                    float px = 1.0 / 270.0;
+                    float r = sampleSlide(uCurrent, currentUv + vec2(px * 1.2 * uRgbEffect, 0.0)).r + sampleSlide(uNext, nextUv + vec2(px * 1.2 * uRgbEffect, 0.0)).r;
+                    float g = frame.g;
+                    float b = sampleSlide(uCurrent, currentUv - vec2(px * 1.2 * uRgbEffect, 0.0)).b + sampleSlide(uNext, nextUv - vec2(px * 1.2 * uRgbEffect, 0.0)).b;
+                    vec3 rgb = mix(frame.rgb, vec3(r, g, b), uRgbEffect);
+                    float triad = 0.72 + 0.28 * step(0.33, fract(vUv.x * 270.0 * 3.0));
+                    float scan = 1.0 - uScanline * (0.18 * step(0.5, fract(vUv.y * 480.0)) + 0.08 * sin(vUv.y * 1500.0));
+                    gl_FragColor = vec4(grade(rgb) * mix(1.0, triad * scan, uRgbEffect), frame.a * uOpacity);
                 }
             `,
             transparent: true,
@@ -1811,18 +1879,18 @@ ${shader.fragmentShader}`
                     color: tint,
                     transparent: true,
                     opacity: visualSettings.hourglassGlassOpacity,
-                    transmission: 1,
-                    roughness: 0.03,
+                    transmission: 0.32,
+                    roughness: 0.1,
                     metalness: 0,
                     thickness: 1.18,
                     ior: 1.5,
                     clearcoat: 1,
                     clearcoatRoughness: 0.02,
-                    reflectivity: 0.92,
+                    reflectivity: 0.28,
                     attenuationColor: tint.clone().lerp(new THREE.Color(0xffffff), 0.25),
                     attenuationDistance: 7.5,
-                    emissive: new THREE.Color(0x6aa8bd),
-                    emissiveIntensity: 0.24,
+                    emissive: new THREE.Color(0x20343b),
+                    emissiveIntensity: 0.008,
                     side: THREE.DoubleSide,
                     depthWrite: false
                 }), visualSettings.hourglassGlassOpacity);
@@ -1833,15 +1901,15 @@ ${shader.fragmentShader}`
                 roughness: 0.17,
                 clearcoat: 1,
                 clearcoatRoughness: 0.08,
-                reflectivity: 1,
-                iridescence: 1,
+                reflectivity: 0.32,
+                iridescence: 0.24,
                 iridescenceIOR: 1.32,
                 iridescenceThicknessRange: [120, 850],
-                sheen: 0.35,
+                sheen: 0.18,
                 sheenColor: new THREE.Color(0xffffff),
-                envMapIntensity: 1.6,
-                emissive: new THREE.Color(0x4d6b73),
-                emissiveIntensity: 0.28,
+                envMapIntensity: 0.52,
+                emissive: new THREE.Color(0x182225),
+                emissiveIntensity: 0.012,
                 transparent: true,
                 opacity: 1
             }), 1);
@@ -1852,8 +1920,8 @@ ${shader.fragmentShader}`
                 side: THREE.DoubleSide,
                 depthTest: true,
                 depthWrite: true,
-                emissive: new THREE.Color(0x6f4c12),
-                emissiveIntensity: 0.42,
+                emissive: new THREE.Color(0x4f3510),
+                emissiveIntensity: 0.06,
                 transparent: true,
                 opacity: 1
             }), 1);
@@ -2129,9 +2197,27 @@ ${shader.fragmentShader}`
         function updateLampFloatAndSpout(elapsed) {
             const lamp = assetObjects.get("lamp");
             if (!lamp) return;
-            const baseY = -0.86;
-            lamp.position.y = baseY + Math.sin(elapsed * 0.78) * 0.026;
-            lamp.rotation.z = Math.sin(elapsed * 0.52) * 0.012;
+            if (sceneMode && grabbedProjection !== lamp) {
+                lampProjectionOffsetTarget.copy(lamp.position).sub(lampDefaultPosition);
+                lampProjectionOffset.copy(lampProjectionOffsetTarget);
+                spoutOrigin.copy(lamp.position).add(new THREE.Vector3(-0.51, 0.4, -0.06));
+                return;
+            }
+            if (grabbedProjection !== lamp) {
+                const velocity = lamp.userData.dragVelocity;
+                if (velocity) {
+                    lamp.position.add(velocity);
+                    velocity.multiplyScalar(0.88);
+                    if (velocity.length() < 0.002) lamp.userData.dragVelocity = null;
+                }
+                const floatY = Math.sin(elapsed * 0.78) * 0.026;
+                const target = lampDefaultPosition.clone();
+                target.y += floatY;
+                lamp.position.lerp(target, 0.038);
+                lamp.rotation.z += (Math.sin(elapsed * 0.52) * 0.012 - lamp.rotation.z) * 0.06;
+            }
+            lampProjectionOffsetTarget.copy(lamp.position).sub(lampDefaultPosition);
+            lampProjectionOffset.lerp(lampProjectionOffsetTarget, 0.08);
             spoutOrigin.copy(lamp.position).add(new THREE.Vector3(-0.51, 0.4, -0.06));
         }
 
@@ -2221,6 +2307,8 @@ ${shader.fragmentShader}`
         }
 
         function attachToObject(object) {
+            if (!object || object.userData.editorLocked || object.userData.editorHidden || object.visible === false) return;
+            multiSelectedObjects.clear();
             selectedObject = object;
             transformControls.attach(object);
             transformControls.visible = sceneMode;
@@ -2233,6 +2321,7 @@ ${shader.fragmentShader}`
 
         function detachSelection() {
             selectedObject = null;
+            multiSelectedObjects.clear();
             transformControls.detach();
             selectionRing.visible = false;
             setStatus("Selection cleared.");
@@ -2309,16 +2398,23 @@ ${shader.fragmentShader}`
                 if (carpetHit && startFlyingCarpetDrag(event, carpetHit)) return;
                 const hit = pickInteractiveProjection(event);
                 if (hit) {
+                    event.preventDefault();
                     grabbedProjection = hit;
                     grabStartX = event.clientX;
                     grabStartY = event.clientY;
                     const grabAxis = hit.userData.grabAxis || "y";
                     grabStartRotation = grabAxis === "screen" || grabAxis === "dual-return" ? hit.rotation.y : hit.rotation[grabAxis];
                     grabStartRotations = { x: hit.rotation.x, y: hit.rotation.y, z: hit.rotation.z };
+                    grabLastPosition.copy(hit.position);
                     grabLastX = event.clientX;
                     grabLastY = event.clientY;
                     grabLastTime = performance.now();
                     hit.userData.inertia = null;
+                    if (hit.userData.dragMove) {
+                        const normal = new THREE.Vector3();
+                        camera.getWorldDirection(normal);
+                        grabMovePlane.setFromNormalAndCoplanarPoint(normal, hit.getWorldPosition(new THREE.Vector3()));
+                    }
                     document.body.style.cursor = "grabbing";
                 }
                 return;
@@ -2330,14 +2426,14 @@ ${shader.fragmentShader}`
             raycaster.setFromCamera(pointer, camera);
             const hits = raycaster.intersectObjects(selectableObjects, true);
             if (hits.length > 0) {
-                const rootObject = findSelectableRoot(hits[0].object);
+                const rootObject = hits.map((hit) => findSelectableRoot(hit.object)).find((object) => object && !object.userData.editorLocked && !object.userData.editorHidden && object.visible !== false);
                 if (rootObject) attachToObject(rootObject);
             }
         }
 
         function pickInteractiveProjection(event) {
             pointerRayFromEvent(event);
-            const roots = [...interactiveProjectionRoots].filter((object) => object.visible);
+            const roots = [...interactiveProjectionRoots].filter((object) => object.visible && !object.userData.editorHidden && !object.userData.editorLocked);
             const hits = raycaster.intersectObjects(roots, true);
             if (!hits.length) return null;
             return findSelectableRoot(hits[0].object) || hits[0].object;
@@ -2348,15 +2444,19 @@ ${shader.fragmentShader}`
             const hit = pickInteractiveProjection(event);
             const timelineActive = activeProjectKey() === "timeline" && alphaForProject(3) > 0.45;
             if ((hit && (hit.userData.projectKey === "timeline" || hit.userData.assetId === "hourglass")) || (!hit && timelineActive)) {
-                hourglassFlipTarget += Math.PI;
-                hourglassFlipProgress = 0;
-                setStatus("Hourglass flipped. Sand reset.");
+                flipHourglassProjection();
             }
             if (hit && (hit.userData.projectKey === "animations" || hit.userData.assetId === "animation-screen")) {
                 heartBurst.classList.remove("active");
                 void heartBurst.offsetWidth;
                 heartBurst.classList.add("active");
             }
+        }
+
+        function flipHourglassProjection() {
+            hourglassFlipTarget += Math.PI;
+            hourglassFlipProgress = 0;
+            setStatus("Hourglass flipped. Sand reset.");
         }
 
         function updateInspector() {
@@ -2378,26 +2478,78 @@ ${shader.fragmentShader}`
 
         function applyInspectorValue(input) {
             if (!selectedObject) return;
-            const before = snapshotObject(selectedObject);
             const transform = input.dataset.transform;
             const axis = input.dataset.axis;
             const value = parseFloat(input.value);
             if (!Number.isFinite(value)) return;
-            if (transform === "rotation") selectedObject.rotation[axis] = THREE.MathUtils.degToRad(value);
-            else selectedObject[transform][axis] = value;
-            const after = snapshotObject(selectedObject);
-            pushTransformAction(selectedObject, before, after, "Inspector edit");
+            const targets = multiSelectedObjects.size ? [...multiSelectedObjects] : [selectedObject];
+            targets.forEach((object) => {
+                if (object.userData.editorLocked || object.userData.editorHidden) return;
+                const before = snapshotObject(object);
+                if (transform === "rotation") object.rotation[axis] = THREE.MathUtils.degToRad(value);
+                else object[transform][axis] = value;
+                const after = snapshotObject(object);
+                pushTransformAction(object, before, after, "Inspector edit");
+            });
             updateSelectionRing();
         }
 
         function renderObjectList() {
             objectListEl.innerHTML = "";
             editableObjects.forEach((object) => {
-                const item = document.createElement("button");
-                item.type = "button";
-                item.className = `object-item${object === selectedObject ? " active" : ""}`;
-                item.innerHTML = `<span>${object.name || "Object"}</span><span>${object.userData.assetId || "custom"}</span>`;
-                item.addEventListener("click", () => attachToObject(object));
+                const item = document.createElement("div");
+                item.className = `object-item${object === selectedObject ? " active" : ""}${multiSelectedObjects.has(object) ? " multi" : ""}`;
+                const select = document.createElement("button");
+                select.type = "button";
+                select.className = "object-select";
+                select.innerHTML = `<span>${object.name || "Object"}</span><span>${object.userData.assetId || "custom"}</span>`;
+                select.addEventListener("click", (event) => {
+                    if (event.ctrlKey || event.metaKey) {
+                        if (!multiSelectedObjects.size && selectedObject && selectedObject !== object) multiSelectedObjects.add(selectedObject);
+                        if (multiSelectedObjects.has(object)) multiSelectedObjects.delete(object);
+                        else multiSelectedObjects.add(object);
+                        selectedObject = multiSelectedObjects.values().next().value || object;
+                        if (selectedObject && !selectedObject.userData.editorLocked && !selectedObject.userData.editorHidden) transformControls.attach(selectedObject);
+                        renderObjectList();
+                        updateInspector();
+                        setStatus(`${multiSelectedObjects.size} object${multiSelectedObjects.size === 1 ? "" : "s"} selected. Inspector edits apply to all selected.`);
+                    } else {
+                        attachToObject(object);
+                    }
+                });
+                const lock = document.createElement("button");
+                lock.type = "button";
+                lock.className = `object-mini${object.userData.editorLocked ? " active" : ""}`;
+                lock.innerHTML = `<i class="ph ph-${object.userData.editorLocked ? "lock" : "lock-open"}" aria-hidden="true"></i>`;
+                lock.title = "Lock object. Shift-click locks all others.";
+                lock.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    if (event.shiftKey) editableObjects.forEach((candidate) => { candidate.userData.editorLocked = candidate !== object; });
+                    else object.userData.editorLocked = !object.userData.editorLocked;
+                    if (object.userData.editorLocked && selectedObject === object) detachSelection();
+                    renderObjectList();
+                });
+                const hide = document.createElement("button");
+                hide.type = "button";
+                hide.className = `object-mini${object.userData.editorHidden ? " active" : ""}`;
+                hide.innerHTML = `<i class="ph ph-${object.userData.editorHidden ? "eye-closed" : "eye"}" aria-hidden="true"></i>`;
+                hide.title = "Hide object. Shift-click hides all others.";
+                hide.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    if (event.shiftKey) {
+                        editableObjects.forEach((candidate) => {
+                            candidate.userData.editorHidden = candidate !== object;
+                            candidate.visible = candidate === object;
+                        });
+                    } else {
+                        object.userData.editorHidden = !object.userData.editorHidden;
+                        object.visible = !object.userData.editorHidden;
+                    }
+                    if (object.userData.editorHidden && selectedObject === object) detachSelection();
+                    renderObjectList();
+                    updateProjectionState();
+                });
+                item.append(select, lock, hide);
                 objectListEl.appendChild(item);
             });
             if (!editableObjects.length) {
@@ -2478,6 +2630,25 @@ ${shader.fragmentShader}`
             return new Promise((resolve, reject) => {
                 gltfLoader.load(path, (gltf) => resolve(gltf.scene), undefined, reject);
             });
+        }
+
+        function stageBullAsset(bull) {
+            bull.name = "Achaemenid Bull Column Hologram";
+            prepareEditableModel(bull, "achaemenid-bull-column");
+            applyProjectMaterial(bull, "history", { wireframe: true, opacityMultiplier: 0.08 });
+            addEdgeOverlay(bull, "history", 12, 0.18);
+            fitModelToBox(bull, { target: 1.85 });
+            bull.position.copy(historyCenter);
+            bull.rotation.set(THREE.MathUtils.degToRad(2), THREE.MathUtils.degToRad(-24), 0);
+            bull.userData.baseScale = bull.scale.clone();
+            bull.userData.grabAxis = "y";
+            projectionStage.add(bull);
+            registerEditable(bull);
+            registerProjectObject("history", bull, { interactive: true });
+            createShapeParticleCloud(bull, "history", 520);
+            assetObjects.set("bull", bull);
+            renderObjectList();
+            updateProjectionState();
         }
 
         async function loadAssetModels() {
@@ -2590,12 +2761,11 @@ ${shader.fragmentShader}`
                 resizeTitle();
                 setTitleOpacity(currentTitleOpacity);
 
-                const [lamp, globe, icosahedron, iran, bull] = await Promise.all([
+                const [lamp, globe, icosahedron, iran] = await Promise.all([
                     loadGLB(modelPaths.lamp),
                     loadGLB(modelPaths.globe),
                     loadGLB(modelPaths.icosahedron),
-                    loadGLB(modelPaths.iran),
-                    loadGLB(modelPaths.bull)
+                    loadGLB(modelPaths.iran)
                 ]);
 
                 const rug = makeFlyingCarpet();
@@ -2607,8 +2777,8 @@ ${shader.fragmentShader}`
 
                 lamp.name = "Aladdin Lamp";
                 prepareEditableModel(lamp, "lamp");
-                fitModelToBox(lamp, { target: 1.35, floorY: -0.86 });
-                lamp.position.set(2.55, -0.86, 0.72);
+                fitModelToBox(lamp, { target: 1.35, floorY: -0.8 });
+                lamp.position.copy(lampDefaultPosition);
                 lamp.rotation.set(0, 0, 0);
                 lamp.traverse((child) => {
                     if (!child.isMesh) return;
@@ -2627,8 +2797,12 @@ ${shader.fragmentShader}`
                     child.receiveShadow = true;
                 });
                 lamp.userData.baseScale = lamp.scale.clone();
+                lamp.userData.dragMove = true;
+                lamp.userData.defaultPosition = lampDefaultPosition.clone();
+                lamp.userData.grabAxis = "move-return";
                 projectionStage.add(lamp);
                 registerEditable(lamp);
+                interactiveProjectionRoots.add(lamp);
                 assetObjects.set("lamp", lamp);
 
                 globe.name = "GeoIntel Holographic Globe";
@@ -2690,21 +2864,6 @@ ${shader.fragmentShader}`
                 createShapeParticleCloud(iran, "iran", 480);
                 assetObjects.set("iran", iran);
 
-                bull.name = "Achaemenid Bull Column Hologram";
-                prepareEditableModel(bull, "achaemenid-bull-column");
-                applyProjectMaterial(bull, "history", { wireframe: true, opacityMultiplier: 0.08 });
-                addEdgeOverlay(bull, "history", 12, 0.18);
-                fitModelToBox(bull, { target: 1.85 });
-                bull.position.copy(historyCenter);
-                bull.rotation.set(THREE.MathUtils.degToRad(2), THREE.MathUtils.degToRad(-24), 0);
-                bull.userData.baseScale = bull.scale.clone();
-                bull.userData.grabAxis = "y";
-                projectionStage.add(bull);
-                registerEditable(bull);
-                registerProjectObject("history", bull, { interactive: true });
-                createShapeParticleCloud(bull, "history", 520);
-                assetObjects.set("bull", bull);
-
                 const hourglass = new THREE.Group();
                 hourglass.name = "Tech and Politics Timeline Hourglass";
                 const hourglassAsset = makeImportedHourglass();
@@ -2736,6 +2895,14 @@ ${shader.fragmentShader}`
                 attachToObject(lamp);
                 updateProjectionState();
                 setStatus("Loaded genie projection assets.");
+                const loadHistory = () => loadGLB(modelPaths.bull)
+                    .then((bullAsset) => {
+                        stageBullAsset(bullAsset);
+                        setStatus("Loaded history projection asset.");
+                    })
+                    .catch((error) => console.warn("History projection asset failed to load.", error));
+                if ("requestIdleCallback" in window) requestIdleCallback(loadHistory, { timeout: 2200 });
+                else setTimeout(loadHistory, 900);
             } catch (error) {
                 console.error(error);
                 setStatus("One or more GLB assets failed to load.");
@@ -2777,6 +2944,7 @@ ${shader.fragmentShader}`
             sceneMode = active;
             document.body.classList.toggle("scene-mode-active", active);
             document.body.classList.toggle("scene-page-visible", active && scenePageVisible);
+            document.body.classList.toggle("scene-layout-preview", active && sceneLayoutPreview);
             sceneToggle.setAttribute("aria-pressed", String(active));
             orbitControls.enabled = active && !scenePageVisible;
             transformControls.visible = active && Boolean(selectedObject);
@@ -2798,6 +2966,12 @@ ${shader.fragmentShader}`
             document.body.classList.toggle("scene-page-visible", sceneMode && scenePageVisible);
             orbitControls.enabled = sceneMode && !scenePageVisible;
             transformControls.enabled = sceneMode && !scenePageVisible;
+        }
+
+        function setSceneLayoutPreview(active) {
+            sceneLayoutPreview = active;
+            document.body.classList.toggle("scene-layout-preview", sceneMode && sceneLayoutPreview);
+            setStatus(sceneLayoutPreview ? "Layout preview overlay on. Page UI is visible but not interactive." : "Layout preview overlay off.");
         }
 
         function setEnvironmentOpacity(opacity) {
@@ -2917,7 +3091,31 @@ ${shader.fragmentShader}`
             }
             setEnvironmentOpacity(environmentOpacity);
             setTitleOpacity(titleOpacity);
+            updateAboutScroll(y, vh);
             updateProjectionState();
+        }
+
+        function updateAboutScroll(scrollY, vh) {
+            const about = document.querySelector("#about");
+            if (!about) return;
+            const rect = about.getBoundingClientRect();
+            const top = scrollY + rect.top;
+            const scrollable = Math.max(about.offsetHeight - vh, 1);
+            const progress = clamp((scrollY - top) / scrollable);
+            const fade = smootherstep(clamp((scrollY - top + vh * 0.18) / (vh * 0.72)));
+            document.documentElement.style.setProperty("--about-video-opacity", fade.toFixed(3));
+            [0, 1, 2].forEach((index) => {
+                const center = 0.18 + index * 0.31;
+                const distance = Math.abs(progress - center);
+                const opacity = clamp(1 - distance / 0.18);
+                const eased = smootherstep(opacity);
+                document.documentElement.style.setProperty(`--about-panel-${index}-opacity`, eased.toFixed(3));
+                document.documentElement.style.setProperty(`--about-panel-${index}-y`, `${((1 - eased) * 42).toFixed(1)}px`);
+            });
+            if (aboutVideo?.duration && Number.isFinite(aboutVideo.duration)) {
+                const targetTime = progress * Math.max(aboutVideo.duration - 0.08, 0);
+                if (Math.abs((aboutVideo.currentTime || 0) - targetTime) > 0.06) aboutVideo.currentTime = targetTime;
+            }
         }
 
         function updateProjectionState() {
@@ -2935,36 +3133,36 @@ ${shader.fragmentShader}`
             const rug = assetObjects.get("rug");
             const lamp = assetObjects.get("lamp");
             currentStageReveal = sceneMode ? 1 : smootherstep(clamp((currentEnvironmentOpacity - 0.04) / 0.72));
-            if (rug) rug.visible = currentStageReveal > 0.025;
-            if (lamp) lamp.visible = currentStageReveal > 0.025;
+            if (rug) rug.visible = currentStageReveal > 0.025 && !rug.userData.editorHidden;
+            if (lamp) lamp.visible = currentStageReveal > 0.025 && !lamp.userData.editorHidden;
 
             if (globe) {
-                globe.visible = geoAlpha * currentStageReveal > 0.02;
+                globe.visible = geoAlpha * currentStageReveal > 0.02 && !globe.userData.editorHidden;
                 setObjectPulseScale(globe, 1 + hoverPulse * 0.035 + geoAlpha * 0.02);
                 setObjectOpacity(globe, geoAlpha * currentStageReveal);
             }
             if (icosahedron) {
-                icosahedron.visible = geoAlpha * currentStageReveal > 0.02;
+                icosahedron.visible = geoAlpha * currentStageReveal > 0.02 && !icosahedron.userData.editorHidden;
                 setObjectPulseScale(icosahedron, 1.08 + hoverPulse * 0.045);
                 setObjectOpacity(icosahedron, geoAlpha * 0.76 * currentStageReveal);
             }
             if (iran) {
-                iran.visible = iranAlpha * currentStageReveal > 0.02;
+                iran.visible = iranAlpha * currentStageReveal > 0.02 && !iran.userData.editorHidden;
                 setObjectPulseScale(iran, 0.86 + iranAlpha * 0.16 + hoverPulse * 0.04);
                 setObjectOpacity(iran, iranAlpha * currentStageReveal);
             }
             if (bull) {
-                bull.visible = historyAlpha * currentStageReveal > 0.02;
+                bull.visible = historyAlpha * currentStageReveal > 0.02 && !bull.userData.editorHidden;
                 setObjectPulseScale(bull, 0.9 + historyAlpha * 0.12 + hoverPulse * 0.035);
                 setObjectOpacity(bull, historyAlpha * currentStageReveal);
             }
             if (hourglass) {
-                hourglass.visible = timelineAlpha * currentStageReveal > 0.02;
+                hourglass.visible = timelineAlpha * currentStageReveal > 0.02 && !hourglass.userData.editorHidden;
                 setObjectPulseScale(hourglass, 0.92 + timelineAlpha * 0.1 + hoverPulse * 0.03);
                 setObjectOpacity(hourglass, timelineAlpha * currentStageReveal);
             }
             if (animationScreen) {
-                animationScreen.visible = animationsAlpha * currentStageReveal > 0.02;
+                animationScreen.visible = animationsAlpha * currentStageReveal > 0.02 && !animationScreen.userData.editorHidden;
                 setObjectPulseScale(animationScreen, 0.96 + animationsAlpha * 0.1 + screenHover * 0.035);
                 setObjectOpacity(animationScreen, animationsAlpha * currentStageReveal);
                 screenMaterial.uniforms.uOpacity.value = visualSettings.screenOpacity * animationsAlpha * currentStageReveal;
@@ -3153,7 +3351,7 @@ ${shader.fragmentShader}`
 
         let appliedQualityPreset = "";
         function applyQualityPreset() {
-            const quality = visualSettings.qualityPreset;
+            const quality = effectiveQualityPreset();
             const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.42) : quality === "medium" ? Math.floor(flowCount * 0.72) : flowCount;
             flowGeometry.setDrawRange(0, flowDrawCount);
             assetObjects.forEach((object) => {
@@ -3171,11 +3369,13 @@ ${shader.fragmentShader}`
                 chromaticPass.enabled = quality === "cinematic";
                 chromaticPass.uniforms.amount.value = quality === "cinematic" ? 0.00072 : 0.00032;
             }
+            useComposerRender = Boolean(composer) && quality === "cinematic";
             renderer.setPixelRatio(preferredPixelRatio());
             composer?.setPixelRatio(preferredPixelRatio());
             if (appliedQualityPreset !== quality) {
                 projectionVideoSource = "";
                 transitionVideoSource = "";
+                preloadAnimationVideos(currentAnimationIndex);
                 appliedQualityPreset = quality;
             }
         }
@@ -3222,8 +3422,10 @@ ${shader.fragmentShader}`
             rootStyle.setProperty("--lens-edge-blur", `${visualSettings.lensEdgeBlur}%`);
             rootStyle.setProperty("--lens-radial-opacity", visualSettings.lensRadialOpacity);
             rootStyle.setProperty("--lens-saturate", visualSettings.lensSaturation);
-            rootStyle.setProperty("--project-title-size", `${visualSettings.projectTitleSize}px`);
-            rootStyle.setProperty("--project-body-size", `${visualSettings.projectBodySize}px`);
+            const compactTextScale = window.innerWidth < 430 ? 0.56 : window.innerWidth < 760 ? 0.68 : window.innerWidth < 1024 ? 0.84 : 1;
+            rootStyle.setProperty("--project-title-size", `${Math.max(6, visualSettings.projectTitleSize * compactTextScale)}px`);
+            rootStyle.setProperty("--project-body-size", `${Math.max(5, visualSettings.projectBodySize * (window.innerWidth < 760 ? 0.82 : compactTextScale))}px`);
+            rootStyle.setProperty("--project-text-gap", `${visualSettings.projectTextGap}px`);
             rootStyle.setProperty("--project-text-rotate-y", `${visualSettings.projectTextRotateY}deg`);
             panelDisplacement?.setAttribute("scale", visualSettings.glassDisplacement);
             lensDisplacement?.setAttribute("scale", visualSettings.lensDisplacement * visualSettings.lensWarpRadius);
@@ -3243,6 +3445,8 @@ ${shader.fragmentShader}`
             getProjectSetting(visualSettings.selectedProject).bob = Boolean(visualSettings.hologramBob);
             screenMaterial.uniforms.uBrightness.value = visualSettings.screenBrightness;
             screenMaterial.uniforms.uSaturation.value = visualSettings.screenSaturation;
+            screenMaterial.uniforms.uRgbEffect.value = visualSettings.screenRgbEffect;
+            screenMaterial.uniforms.uScanline.value = visualSettings.screenScanline;
             screenMaterial.uniforms.uOpacity.value = visualSettings.screenOpacity * alphaForProject(4) * currentStageReveal;
             applyQualityPreset();
             titleGroup.traverse((child) => {
@@ -3497,6 +3701,7 @@ ${shader.fragmentShader}`
             screenTransitionDirection = direction >= 0 ? 1 : -1;
             screenTransitionStart = performance.now();
             transitionVideoSource = setProjectionSource(transitionVideo, pendingAnimationIndex, transitionVideoSource);
+            preloadAnimationVideos(pendingAnimationIndex);
             transitionVideo.currentTime = 0;
             transitionVideo.muted = projectionVideo.muted;
             if (!animationPaused) {
@@ -3568,6 +3773,29 @@ ${shader.fragmentShader}`
                 * currentStageReveal
                 * activeProjectionAlpha()
                 * animationSuppression;
+        }
+
+        function updateAmbientParticles(elapsed) {
+            const drawCount = Math.min(ambientParticleCount, Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
+            ambientParticleGeometry.setDrawRange(0, drawCount);
+            ambientParticles.visible = drawCount > 0 && currentEnvironmentOpacity > 0.06;
+            ambientParticleMaterial.size = visualSettings.ambientParticleSize;
+            ambientParticleMaterial.opacity = 0.34 * currentEnvironmentOpacity;
+            const palette = blendedProjectPalette();
+            const positions = ambientParticleGeometry.attributes.position.array;
+            const colors = ambientParticleGeometry.attributes.color.array;
+            for (let i = 0; i < drawCount; i += 1) {
+                const seed = ambientParticleSeeds[i];
+                positions[i * 3] = seed.x + Math.sin(elapsed * 0.12 + seed.phase) * 0.06;
+                positions[i * 3 + 1] = seed.y + Math.sin(elapsed * 0.18 + seed.phase * 1.7) * 0.05;
+                positions[i * 3 + 2] = seed.z + Math.cos(elapsed * 0.1 + seed.phase) * 0.06;
+                const color = palette[i % palette.length];
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+            ambientParticleGeometry.attributes.position.needsUpdate = true;
+            ambientParticleGeometry.attributes.color.needsUpdate = true;
         }
 
         function updateHourglassSand(elapsed) {
@@ -3753,18 +3981,29 @@ ${shader.fragmentShader}`
         }
 
         transformControls.addEventListener("dragging-changed", (event) => {
+            transformDragging = event.value;
             orbitControls.enabled = sceneMode && !scenePageVisible && !event.value;
         });
 
         transformControls.addEventListener("mouseDown", () => {
-            if (selectedObject) transformStart = snapshotObject(selectedObject);
+            if (!selectedObject) return;
+            transformStart = snapshotObject(selectedObject);
+            multiTransformStart = null;
+            if (multiSelectedObjects.size > 1 && multiSelectedObjects.has(selectedObject)) {
+                multiTransformStart = new Map([...multiSelectedObjects].map((object) => [object, snapshotObject(object)]));
+            }
         });
 
         transformControls.addEventListener("mouseUp", () => {
-            if (selectedObject && transformStart) {
+            if (selectedObject && multiTransformStart?.size) {
+                multiTransformStart.forEach((before, object) => {
+                    pushTransformAction(object, before, snapshotObject(object), "Multi-object transform");
+                });
+            } else if (selectedObject && transformStart) {
                 pushTransformAction(selectedObject, transformStart, snapshotObject(selectedObject), "Transform gizmo");
             }
             transformStart = null;
+            multiTransformStart = null;
             updateInspector();
         });
 
@@ -3777,6 +4016,39 @@ ${shader.fragmentShader}`
                     transformStart.scale[1] * ratio,
                     transformStart.scale[2] * ratio
                 );
+            }
+            if (selectedObject && multiTransformStart?.size && multiTransformStart.has(selectedObject)) {
+                const mode = transformControls.getMode();
+                const selectedStart = multiTransformStart.get(selectedObject);
+                const deltaPosition = selectedObject.position.clone().sub(new THREE.Vector3().fromArray(selectedStart.position));
+                const deltaRotation = new THREE.Euler(
+                    selectedObject.rotation.x - selectedStart.rotation[0],
+                    selectedObject.rotation.y - selectedStart.rotation[1],
+                    selectedObject.rotation.z - selectedStart.rotation[2]
+                );
+                const scaleRatio = new THREE.Vector3(
+                    selectedObject.scale.x / Math.max(selectedStart.scale[0], 0.0001),
+                    selectedObject.scale.y / Math.max(selectedStart.scale[1], 0.0001),
+                    selectedObject.scale.z / Math.max(selectedStart.scale[2], 0.0001)
+                );
+                multiTransformStart.forEach((snapshot, object) => {
+                    if (object === selectedObject || object.userData.editorLocked || object.userData.editorHidden) return;
+                    if (mode === "translate") object.position.fromArray(snapshot.position).add(deltaPosition);
+                    if (mode === "rotate") {
+                        object.rotation.set(
+                            snapshot.rotation[0] + deltaRotation.x,
+                            snapshot.rotation[1] + deltaRotation.y,
+                            snapshot.rotation[2] + deltaRotation.z
+                        );
+                    }
+                    if (mode === "scale") {
+                        object.scale.set(
+                            snapshot.scale[0] * scaleRatio.x,
+                            snapshot.scale[1] * scaleRatio.y,
+                            snapshot.scale[2] * scaleRatio.z
+                        );
+                    }
+                });
             }
             if (selectedObject === cameraRig) {
                 camera.position.copy(cameraRig.position);
@@ -3842,6 +4114,10 @@ ${shader.fragmentShader}`
         });
         projectTextTarget?.addEventListener("change", () => {
             if (projectDescriptionEditor) projectDescriptionEditor.value = projectText[projectTextTarget.value] || "";
+        });
+        hourglassFlipBtn?.addEventListener("click", (event) => {
+            event.preventDefault();
+            flipHourglassProjection();
         });
 
         saveBrowserBtn.addEventListener("click", () => {
@@ -3953,15 +4229,25 @@ ${shader.fragmentShader}`
             pointerTarget.y = (event.clientY / window.innerHeight - 0.5) * 2;
             const interactiveUi = event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock");
             if (!grabbedProjection && !sceneMode && currentEnvironmentOpacity > 0.2 && !interactiveUi && updateFlyingCarpetPointer(event)) {
+                if (draggedCarpet) event.preventDefault();
                 return;
             }
             if (grabbedProjection) {
+                event.preventDefault();
                 const axis = grabbedProjection.userData.grabAxis || "y";
                 const now = performance.now();
                 const dt = Math.max(16, now - grabLastTime);
                 const dx = event.clientX - grabStartX;
                 const dy = event.clientY - grabStartY;
-                if (axis === "screen") {
+                if (axis === "move-return") {
+                    pointerRayFromEvent(event);
+                    if (raycaster.ray.intersectPlane(grabMovePlane, grabMoveWorld)) {
+                        const local = grabbedProjection.parent.worldToLocal(grabMoveWorld.clone());
+                        const before = grabbedProjection.position.clone();
+                        grabbedProjection.position.lerp(local, 0.75);
+                        grabbedProjection.userData.dragVelocity = grabbedProjection.position.clone().sub(before).multiplyScalar(0.9);
+                    }
+                } else if (axis === "screen") {
                     grabbedProjection.rotation.y = grabStartRotations.y + dx * 0.006;
                     grabbedProjection.rotation.x = grabStartRotations.x - dy * 0.006;
                     grabbedProjection.userData.inertia = {
@@ -3992,7 +4278,7 @@ ${shader.fragmentShader}`
                 hoveredInteractive = pickInteractiveProjection(event);
                 document.body.style.cursor = hoveredInteractive ? "grab" : "";
             }
-        }, { passive: true });
+        }, { passive: false });
         window.addEventListener("pointerup", () => {
             draggedCarpet = null;
             draggedCarpetNode = -1;
@@ -4015,6 +4301,10 @@ ${shader.fragmentShader}`
             }
             if (key === "v" && sceneMode) {
                 setScenePageVisible(true);
+            }
+            if (key === "k" && sceneMode) {
+                event.preventDefault();
+                setSceneLayoutPreview(!sceneLayoutPreview);
             }
             if ((event.ctrlKey || event.metaKey) && key === "z") {
                 event.preventDefault();
@@ -4050,6 +4340,29 @@ ${shader.fragmentShader}`
             updateScrollState();
         });
         window.addEventListener("scroll", updateScrollState, { passive: true });
+        window.addEventListener("wheel", (event) => {
+            if (!sceneMode || !transformDragging || !selectedObject) return;
+            event.preventDefault();
+            const mode = transformControls.getMode();
+            const delta = -event.deltaY * (mode === "rotate" ? 0.0008 : 0.0015);
+            const targets = multiSelectedObjects.size ? [...multiSelectedObjects] : [selectedObject];
+            targets.forEach((object) => {
+                if (object.userData.editorLocked || object.userData.editorHidden || object.visible === false) return;
+                const before = snapshotObject(object);
+                if (mode === "translate") object.position.z += delta;
+                if (mode === "rotate") object.rotation.z += delta;
+                if (mode === "scale") {
+                    if (shiftDown) {
+                        const next = Math.max(0.02, object.scale.z + delta);
+                        object.scale.setScalar(next);
+                    } else {
+                        object.scale.z = Math.max(0.02, object.scale.z + delta);
+                    }
+                }
+                pushTransformAction(object, before, snapshotObject(object), "Wheel 3rd axis");
+            });
+            updateInspector();
+        }, { passive: false });
 
         function animate() {
             const elapsed = performance.now() * 0.001;
@@ -4072,21 +4385,24 @@ ${shader.fragmentShader}`
             const iran = assetObjects.get("iran");
             const bull = assetObjects.get("bull");
             const hourglass = assetObjects.get("hourglass");
-            if (globe && !prefersReducedMotion) {
+            const screen = assetObjects.get("animationScreen");
+            const projectionOffset = lampProjectionOffset;
+            if (globe && !prefersReducedMotion && !sceneMode) {
                 globe.userData.restRotation.y += projectSettings.geo.spin;
                 if (grabbedProjection !== globe) {
                     if (!globe.userData.inertia) {
                         globe.rotation.x += (globe.userData.restRotation.x - globe.rotation.x) * 0.065;
                         globe.rotation.y += (globe.userData.restRotation.y - globe.rotation.y) * 0.065;
                     }
-                    globe.position.y = geoCenter.y + (projectSettings.geo.bob ? Math.sin(elapsed * 0.72) * 0.022 : 0);
+                    globe.position.set(geoCenter.x + projectionOffset.x, geoCenter.y + projectionOffset.y + (projectSettings.geo.bob ? Math.sin(elapsed * 0.72) * 0.022 : 0), geoCenter.z + projectionOffset.z);
                 }
             }
-            if (icosahedron && !prefersReducedMotion) {
+            if (icosahedron && !prefersReducedMotion && !sceneMode) {
                 if (grabbedProjection !== icosahedron) icosahedron.rotation.y += projectSettings.geo.frameSpin ?? -0.0061;
                 icosahedron.rotation.x = Math.sin(elapsed * 0.4) * 0.08;
+                icosahedron.position.copy(geoCenter).add(projectionOffset);
             }
-            if (iran && !prefersReducedMotion) {
+            if (iran && !prefersReducedMotion && !sceneMode) {
                 if (grabbedProjection !== iran && !iran.userData.inertia) {
                     const cameraLocal = iran.parent.worldToLocal(camera.getWorldPosition(new THREE.Vector3()).clone());
                     const targetYaw = Math.atan2(cameraLocal.x - iran.position.x, cameraLocal.z - iran.position.z);
@@ -4095,7 +4411,7 @@ ${shader.fragmentShader}`
                     iran.rotation.z = THREE.MathUtils.degToRad(4) + Math.sin(elapsed * (1.7 + Math.abs(projectSettings.iran.spin) * 60)) * 0.02;
                     iran.userData.restRotation?.copy(iran.rotation);
                 }
-                iran.position.y = iranCenter.y + (projectSettings.iran.bob ? Math.sin(elapsed * 0.78 + 1.3) * 0.022 : 0);
+                iran.position.set(iranCenter.x + projectionOffset.x, iranCenter.y + projectionOffset.y + (projectSettings.iran.bob ? Math.sin(elapsed * 0.78 + 1.3) * 0.022 : 0), iranCenter.z + projectionOffset.z);
                 iran.traverse((child) => {
                     if (child.material?.userData?.iranHeartbeat) {
                         child.material.userData.iranHeartbeat.value = elapsed * (grabbedProjection === iran ? 1.15 : 0.72);
@@ -4103,18 +4419,20 @@ ${shader.fragmentShader}`
                     }
                 });
             }
-            if (bull && !prefersReducedMotion && grabbedProjection !== bull) {
+            if (bull && !prefersReducedMotion && !sceneMode && grabbedProjection !== bull) {
                 bull.rotation.y += projectSettings.history.spin;
-                bull.position.y = historyCenter.y + (projectSettings.history.bob ? Math.sin(elapsed * 0.85) * 0.032 : 0);
+                bull.position.set(historyCenter.x + projectionOffset.x, historyCenter.y + projectionOffset.y + (projectSettings.history.bob ? Math.sin(elapsed * 0.85) * 0.032 : 0), historyCenter.z + projectionOffset.z);
             }
-            if (hourglass && !prefersReducedMotion && grabbedProjection !== hourglass) {
+            if (hourglass && !prefersReducedMotion && !sceneMode && grabbedProjection !== hourglass) {
                 hourglass.rotation.y += projectSettings.timeline.spin;
-                hourglass.position.y = timelineCenter.y + (projectSettings.timeline.bob ? Math.sin(elapsed * 0.7) * 0.026 : 0);
+                hourglass.position.set(timelineCenter.x + projectionOffset.x, timelineCenter.y + projectionOffset.y + (projectSettings.timeline.bob ? Math.sin(elapsed * 0.7) * 0.026 : 0), timelineCenter.z + projectionOffset.z);
             }
+            if (screen && !sceneMode && grabbedProjection !== screen) screen.position.copy(animationsCenter).add(lampProjectionOffsetTarget);
 
             updateLampFloatAndSpout(elapsed);
             applyProjectionInertia();
             updateFlowParticles(elapsed);
+            updateAmbientParticles(elapsed);
             updateImportedHourglass(elapsed);
             updateFlyingCarpet(elapsed);
             [globe, iran, bull, hourglass].forEach((object, index) => {
@@ -4138,7 +4456,7 @@ ${shader.fragmentShader}`
 
             updateSelectionRing();
             orbitControls.update();
-            if (composer && currentEnvironmentOpacity > 0.05) composer.render();
+            if (useComposerRender && currentEnvironmentOpacity > 0.05) composer.render();
             else renderer.render(scene, camera);
             requestAnimationFrame(animate);
         }
@@ -4179,6 +4497,13 @@ ${shader.fragmentShader}`
         transformControls.enabled = false;
         applyProjectTextToCards();
         syncProjectSettingInputs("geo");
+        if (!cameraKeyframes.length) {
+            defaultCameraKeyframes.forEach((keyframe) => cameraKeyframes.push({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] }));
+            selectedCameraKeyframe = 0;
+        }
+        if (cameraEasing) cameraEasing.value = "smooth-flow";
+        if (scrollSyncToggle) scrollSyncToggle.checked = true;
+        aboutVideo?.load();
         applyVisualSettings();
         syncAllSettingInputs();
         preloadAnimationVideos();
