@@ -4,606 +4,715 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pouya AI | Digital Heritage & Intelligence</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Phosphor Icons -->
+
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Premium Fonts -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                        display: ['Playfair Display', 'serif'],
-                    },
-                    colors: {
-                        brand: {
-                            black: '#000000',
-                            dark: '#0A0A0B',
-                            accent: '#0066FF',
-                            cyan: '#00F0FF',
-                        },
-                        instagram: {
-                            start: '#833AB4',
-                            mid: '#FDA45C',
-                            end: '#C13584'
-                        }
-                    },
-                    animation: {
-                        'bounce-subtle': 'bounce-subtle 2s infinite',
-                    },
-                    keyframes: {
-                        'bounce-subtle': {
-                            '0%, 100%': { transform: 'translateY(-10%)', opacity: '1' },
-                            '50%': { transform: 'translateY(10%)', opacity: '0.6' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        :root {
-            --glow-color: rgba(0, 102, 255, 0.15);
-        }
-
-        body {
-            background-color: #000000; /* Pitch Black */
-            color: #FFFFFF;
-            overflow-x: hidden;
-            scroll-behavior: smooth;
-        }
-
-        /* --- SPACE BACKGROUND CANVAS --- */
-        #star-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -2; /* Behind everything */
-            pointer-events: none;
-        }
-
-        /* Shimmer Text Effect */
-        .text-shimmer {
-            background: linear-gradient(to right, #ffffff 0%, #4a4a4a 50%, #ffffff 100%);
-            background-size: 200% auto;
-            color: transparent;
-            -webkit-background-clip: text;
-            background-clip: text;
-            animation: shimmer 5s linear infinite;
-        }
-
-        @keyframes shimmer {
-            to { background-position: 200% center; }
-        }
-
-        /* Bento Card Styles */
-        .bento-card {
-            background: rgba(20, 20, 20, 0.15); /* Increased translucency from 0.4 to 0.15 */
-            /* Default variables, overridden inline per card */
-            --border-color: rgba(255, 255, 255, 0.08);
-            --glow-color: rgba(255, 255, 255, 0.1);
-            
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px); /* Reduced blur slightly to show stars better */
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .bento-card:hover {
-            background: rgba(30, 30, 30, 0.25); /* More translucent hover state */
-            border-color: var(--border-color);
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-        }
-
-        .bento-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), var(--glow-color), transparent 50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .bento-card:hover::after {
-            opacity: 1;
-        }
-
-        /* Custom Font for Ampersand */
-        .classic-amp {
-            font-family: 'Baskerville', 'Times New Roman', serif;
-            font-style: italic;
-            font-weight: 400;
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #0066FF; }
-
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s ease-out;
-        }
-
-        .reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Scroll Indicator Animations */
-        .scroll-chevron {
-            animation: chevron-pulse 2s infinite;
-        }
-        .scroll-chevron:nth-child(2) { animation-delay: 0.2s; }
-        .scroll-chevron:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes chevron-pulse {
-            0% { opacity: 0; transform: translateY(-5px); }
-            50% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(5px); }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/tailwind.css">
+    <link rel="stylesheet" href="assets/css/portfolio.css?v=20260523f">
 </head>
-<body class="selection:bg-brand-accent selection:text-white">
+<body>
+    <svg class="liquid-defs" aria-hidden="true">
+        <filter id="liquid-glass-panel" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+            <feImage id="liquid-panel-map" x="0" y="0" width="100%" height="100%" result="displacement_map" preserveAspectRatio="none"></feImage>
+            <feDisplacementMap id="liquid-panel-displacement" in="SourceGraphic" in2="displacement_map" scale="18" xChannelSelector="R" yChannelSelector="G" result="refracted"></feDisplacementMap>
+            <feColorMatrix in="refracted" type="saturate" values="1.3" result="saturated"></feColorMatrix>
+            <feComponentTransfer in="saturated">
+                <feFuncA type="linear" slope="1"></feFuncA>
+            </feComponentTransfer>
+        </filter>
+        <filter id="liquid-glass-lens" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+            <feImage id="liquid-lens-map" x="0" y="0" width="100%" height="100%" result="lens_map" preserveAspectRatio="none"></feImage>
+            <feDisplacementMap id="liquid-lens-displacement" in="SourceGraphic" in2="lens_map" scale="24" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+        </filter>
+    </svg>
 
-    <!-- The Starfield Canvas -->
-    <canvas id="star-canvas"></canvas>
-    
-    <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 px-6 py-6 flex flex-col md:flex-row justify-between items-center backdrop-blur-md border-b border-white/5 gap-4 md:gap-0">
-        <div class="flex items-center gap-8 w-full md:w-auto justify-between md:justify-start">
-            <a href="#" class="text-xl font-display font-semibold tracking-tight flex items-center gap-2">
-                Pouya AI
-            </a>
-            
-            <!-- Mobile Menu Button (Hidden on Desktop) -->
-            <button class="md:hidden text-white/50 hover:text-white">
-                <i class="ph ph-list text-2xl"></i>
+    <div id="blackhole-background" aria-hidden="true">
+        <video id="blackhole-video" autoplay muted loop playsinline preload="auto" poster="assets/media/blackholes-poster.jpg"></video>
+        <div class="video-vignette"></div>
+    </div>
+    <div id="blackhole-lens" class="blackhole-lens" aria-hidden="true"></div>
+
+    <div class="scene-wash" aria-hidden="true"></div>
+    <div id="scene-root" aria-hidden="true"></div>
+
+    <button id="scene-toggle" class="liquid-glass" type="button" aria-pressed="false">
+        <i class="ph ph-cube-transparent text-lg" aria-hidden="true"></i>
+        <span>Scene</span>
+        <kbd>H</kbd>
+    </button>
+
+    <button id="settings-toggle" class="liquid-glass" type="button" aria-pressed="false">
+        <i class="ph ph-sliders-horizontal text-lg" aria-hidden="true"></i>
+        <span>Settings</span>
+        <kbd>O</kbd>
+    </button>
+
+    <aside id="scene-hud" class="liquid-glass" aria-label="3D scene controls">
+        <div class="scene-hud-header flex items-center justify-between gap-3">
+            <div>
+                <div class="text-[11px] uppercase tracking-[0.12em] text-brand-cyan/80 font-extrabold">3D Stage</div>
+                <div class="text-sm font-semibold text-white/90">Scene editor</div>
+            </div>
+            <button id="scene-close-btn" class="hud-button !w-9 !min-h-9" type="button" aria-label="Close scene mode">
+                <i class="ph ph-x text-lg" aria-hidden="true"></i>
             </button>
         </div>
 
-        <!-- Links Container -->
-        <div class="hidden md:flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-white/50 font-sans px-4">
-            <a href="#grid" class="hover:text-white transition-colors">Projects</a>
-            <a href="#about" class="hover:text-white transition-colors">About</a>
-            <span class="text-white/10">|</span>
-            <a href="https://pouyaii.github.io/" target="_blank" class="hover:text-white transition-colors">Geo Intel</a>
-            <a href="https://pouyaii.github.io/Iran/" target="_blank" class="hover:text-white transition-colors">Iran Protest Map</a>
-            <a href="https://pouyaii.github.io/Iran-History/" target="_blank" class="hover:text-white transition-colors">History Layered</a>
-            <a href="https://pouyaii.github.io/Timelines/" target="_blank" class="hover:text-white transition-colors">Tech & Politics Timeline</a>
-            <a href="https://www.instagram.com/pouyaaai/" target="_blank" class="hover:text-white transition-colors">Animations</a>
+        <div class="hud-section">
+            <div class="scene-hud-row">
+                <button id="translate-btn" class="hud-button active" type="button"><i class="ph ph-arrows-out-cardinal" aria-hidden="true"></i>Move</button>
+                <button id="rotate-btn" class="hud-button" type="button"><i class="ph ph-arrow-clockwise" aria-hidden="true"></i>Rotate</button>
+                <button id="scale-btn" class="hud-button" type="button"><i class="ph ph-arrows-out-simple" aria-hidden="true"></i>Scale</button>
+                <button id="snap-btn" class="hud-button" type="button"><i class="ph ph-magnet" aria-hidden="true"></i>Snap</button>
+                <button id="undo-btn" class="hud-button" type="button"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>Undo</button>
+                <button id="redo-btn" class="hud-button" type="button"><i class="ph ph-arrow-u-up-right" aria-hidden="true"></i>Redo</button>
+                <button id="delete-btn" class="hud-button danger" type="button"><i class="ph ph-trash" aria-hidden="true"></i>Delete</button>
+                <button id="add-light-btn" class="hud-button" type="button"><i class="ph ph-lightbulb" aria-hidden="true"></i>Light</button>
+                <label for="model-file" class="hud-file"><i class="ph ph-upload-simple" aria-hidden="true"></i>GLB</label>
+                <input id="model-file" type="file" accept=".glb,.gltf">
+            </div>
+            <div id="scene-status">Selected: none.</div>
+            <p class="mt-2 text-[11px] leading-5 text-white/42">Hotkeys: H editor, hold V to show and scroll the page while tools stay open, W/E/R tools, Delete remove, Ctrl+Z/Y undo/redo, Shift while scaling for uniform scale, Esc exit.</p>
         </div>
 
-        <div class="hidden md:flex items-center gap-4">
-            <a href="https://github.com/pouyaii" target="_blank" class="px-5 py-2 bg-white text-black text-sm font-bold rounded-full hover:bg-brand-cyan transition-all transform active:scale-95 font-sans">
-                GitHub Profile
+        <div class="hud-section">
+            <div class="mb-2 flex items-center justify-between">
+                <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Objects</div>
+                <button id="refresh-objects-btn" class="hud-button !min-h-7 !px-2" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></button>
+            </div>
+            <div id="object-list" class="object-list"></div>
+        </div>
+
+        <div class="hud-section">
+            <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Transform</div>
+            <div class="inspector-grid">
+                <span>Pos</span>
+                <input class="hud-input transform-input" data-transform="position" data-axis="x" type="number" step="0.05">
+                <input class="hud-input transform-input" data-transform="position" data-axis="y" type="number" step="0.05">
+                <input class="hud-input transform-input" data-transform="position" data-axis="z" type="number" step="0.05">
+                <span>Rot</span>
+                <input class="hud-input transform-input" data-transform="rotation" data-axis="x" type="number" step="1">
+                <input class="hud-input transform-input" data-transform="rotation" data-axis="y" type="number" step="1">
+                <input class="hud-input transform-input" data-transform="rotation" data-axis="z" type="number" step="1">
+                <span>Scl</span>
+                <input class="hud-input transform-input" data-transform="scale" data-axis="x" type="number" step="0.05">
+                <input class="hud-input transform-input" data-transform="scale" data-axis="y" type="number" step="0.05">
+                <input class="hud-input transform-input" data-transform="scale" data-axis="z" type="number" step="0.05">
+            </div>
+        </div>
+
+        <div class="hud-section">
+            <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Scene Save</div>
+            <div class="scene-hud-row two">
+                <button id="save-browser-btn" class="hud-button" type="button"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Save</button>
+                <button id="load-browser-btn" class="hud-button" type="button"><i class="ph ph-folder-open" aria-hidden="true"></i>Load</button>
+                <button id="export-scene-btn" class="hud-button" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i>Export JSON</button>
+                <label for="scene-load-file" class="hud-file"><i class="ph ph-upload" aria-hidden="true"></i>Import JSON</label>
+                <input id="scene-load-file" type="file" accept="application/json,.json">
+                <button id="save-settings-btn" class="hud-button" type="button"><i class="ph ph-sliders" aria-hidden="true"></i>Save Config</button>
+                <label for="setting-load-file" class="hud-file"><i class="ph ph-upload" aria-hidden="true"></i>Load Config</label>
+                <input id="setting-load-file" type="file" accept="application/json,.json">
+            </div>
+        </div>
+
+        <div class="hud-section">
+            <div class="mb-2 flex items-center justify-between">
+                <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Camera Animation</div>
+                <label class="flex items-center gap-2 text-[11px] text-white/60"><input id="scroll-sync-toggle" type="checkbox"> Scroll sync</label>
+            </div>
+            <div class="scene-hud-row two">
+                <button id="camera-keyframe-btn" class="hud-button" type="button"><i class="ph ph-plus-circle" aria-hidden="true"></i>Keyframe</button>
+                <button id="camera-play-btn" class="hud-button" type="button"><i class="ph ph-play" aria-hidden="true"></i>Play</button>
+                <button id="camera-export-btn" class="hud-button" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i>Export Cam</button>
+                <label for="camera-load-file" class="hud-file"><i class="ph ph-upload" aria-hidden="true"></i>Import Cam</label>
+                <input id="camera-load-file" type="file" accept="application/json,.json">
+            </div>
+            <select id="camera-easing" class="hud-select mt-2">
+                <option value="smooth">Smooth ease</option>
+                <option value="linear">Linear</option>
+                <option value="cinematic">Cinematic ease</option>
+                <option value="smooth-flow">Smooth flow spline</option>
+            </select>
+            <div class="mt-2 grid grid-cols-[auto_1fr_auto] items-center gap-2 text-[11px] text-white/56">
+                <button id="camera-pause-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-pause" aria-hidden="true"></i></button>
+                <input id="camera-timeline" class="hud-range" type="range" min="0" max="1" step="0.001" value="0">
+                <button id="camera-update-keyframe-btn" class="hud-button !min-h-8 !px-2" type="button">Set KF</button>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+                <button id="camera-third-person-btn" class="hud-button" type="button"><i class="ph ph-video-camera" aria-hidden="true"></i>3rd Person Cam</button>
+                <button id="camera-smooth-btn" class="hud-button" type="button"><i class="ph ph-wave-sine" aria-hidden="true"></i>Smooth Seq</button>
+            </div>
+            <div class="mt-2 grid grid-cols-[1fr_auto] gap-2">
+                <input id="camera-sequence-name" class="hud-input" type="text" value="Portfolio projection path" aria-label="Camera sequence name">
+                <button id="camera-save-sequence-btn" class="hud-button !px-2" type="button">Save Seq</button>
+            </div>
+            <select id="camera-sequence-select" class="hud-select mt-2" aria-label="Saved camera sequences"></select>
+            <div id="camera-keyframe-list" class="mt-2 grid gap-1 text-[11px] text-white/52"></div>
+        </div>
+
+        <div class="hud-section">
+            <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Visual Settings</div>
+
+            <details class="hud-details" open>
+                <summary>Liquid glass panels <i class="ph ph-sliders-horizontal" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-glass-blur">Blur</label>
+                    <input id="setting-glass-blur" class="hud-range live-setting" data-setting="glassBlur" type="range" min="0" max="34" step="1" value="1">
+                    <span class="setting-value" data-value-for="glassBlur">1</span>
+                    <label for="setting-glass-displacement">Lensing</label>
+                    <input id="setting-glass-displacement" class="hud-range live-setting" data-setting="glassDisplacement" type="range" min="0" max="44" step="1" value="18">
+                    <span class="setting-value" data-value-for="glassDisplacement">18</span>
+                    <label for="setting-glass-saturation">Saturation</label>
+                    <input id="setting-glass-saturation" class="hud-range live-setting" data-setting="glassSaturation" type="range" min="0.7" max="2.6" step="0.05" value="1.55">
+                    <span class="setting-value" data-value-for="glassSaturation">1.55</span>
+                    <label for="setting-glass-alpha">Panel alpha</label>
+                    <input id="setting-glass-alpha" class="hud-range live-setting" data-setting="glassPanelAlpha" type="range" min="0.08" max="0.82" step="0.01" value="0.1">
+                    <span class="setting-value" data-value-for="glassPanelAlpha">0.10</span>
+                    <label for="setting-glass-highlight">Highlight</label>
+                    <input id="setting-glass-highlight" class="hud-range live-setting" data-setting="glassHighlightAlpha" type="range" min="0" max="1" step="0.01" value="0.8">
+                    <span class="setting-value" data-value-for="glassHighlightAlpha">0.80</span>
+                    <label for="setting-glass-glare">White glare</label>
+                    <input id="setting-glass-glare" class="hud-range live-setting" data-setting="glassGlareAlpha" type="range" min="0" max="1" step="0.01" value="0.14">
+                    <span class="setting-value" data-value-for="glassGlareAlpha">0.14</span>
+                    <label for="setting-chromatic-glass">Chromatic</label>
+                    <input id="setting-chromatic-glass" class="live-setting" data-setting="chromaticGlass" type="checkbox" checked>
+                    <span class="setting-value" data-value-for="chromaticGlass">on</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Hero cursor lens <i class="ph ph-cursor-click" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-lens-opacity">Opacity</label>
+                    <input id="setting-lens-opacity" class="hud-range live-setting" data-setting="lensOpacity" type="range" min="0" max="1" step="0.01" value="0.5">
+                    <span class="setting-value" data-value-for="lensOpacity">0.5</span>
+                    <label for="setting-lens-size">Size</label>
+                    <input id="setting-lens-size" class="hud-range live-setting" data-setting="lensSize" type="range" min="58" max="320" step="2" value="58">
+                    <span class="setting-value" data-value-for="lensSize">58</span>
+                    <label for="setting-lens-power">Lensing</label>
+                    <input id="setting-lens-power" class="hud-range live-setting" data-setting="lensDisplacement" type="range" min="0" max="84" step="1" value="30">
+                    <span class="setting-value" data-value-for="lensDisplacement">30</span>
+                    <label for="setting-lens-radius">Warp radius</label>
+                    <input id="setting-lens-radius" class="hud-range live-setting" data-setting="lensWarpRadius" type="range" min="0.45" max="1.8" step="0.05" value="0.85">
+                    <span class="setting-value" data-value-for="lensWarpRadius">0.85</span>
+                    <label for="setting-lens-blue">Blue edge</label>
+                    <input id="setting-lens-blue" class="hud-range live-setting" data-setting="lensEdgeBlue" type="range" min="0" max="0.65" step="0.01" value="0.01">
+                    <span class="setting-value" data-value-for="lensEdgeBlue">0.01</span>
+                    <label for="setting-lens-edge-blur">Edge blur</label>
+                    <input id="setting-lens-edge-blur" class="hud-range live-setting" data-setting="lensEdgeBlur" type="range" min="4" max="36" step="1" value="36">
+                    <span class="setting-value" data-value-for="lensEdgeBlur">36</span>
+                    <label for="setting-lens-radial-opacity">Radial alpha</label>
+                    <input id="setting-lens-radial-opacity" class="hud-range live-setting" data-setting="lensRadialOpacity" type="range" min="0" max="0.34" step="0.01" value="0.13">
+                    <span class="setting-value" data-value-for="lensRadialOpacity">0.13</span>
+                    <label for="setting-lens-saturation">Saturation</label>
+                    <input id="setting-lens-saturation" class="hud-range live-setting" data-setting="lensSaturation" type="range" min="0.75" max="2.8" step="0.05" value="2.8">
+                    <span class="setting-value" data-value-for="lensSaturation">2.8</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Pouya AI title <i class="ph ph-text-t" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-title-opacity">Opacity</label>
+                    <input id="setting-title-opacity" class="hud-range live-setting" data-setting="titleOpacity" type="range" min="0.35" max="1" step="0.01" value="0.84">
+                    <span class="setting-value" data-value-for="titleOpacity">0.84</span>
+                    <label for="setting-title-frost">Frost</label>
+                    <input id="setting-title-frost" class="hud-range live-setting" data-setting="titleFrost" type="range" min="0" max="0.6" step="0.01" value="0.04">
+                    <span class="setting-value" data-value-for="titleFrost">0.04</span>
+                    <label for="setting-title-edge">Edges</label>
+                    <input id="setting-title-edge" class="hud-range live-setting" data-setting="titleEdges" type="range" min="0" max="0.9" step="0.01" value="0.5">
+                    <span class="setting-value" data-value-for="titleEdges">0.50</span>
+                    <label for="setting-title-parallax">Parallax</label>
+                    <input id="setting-title-parallax" class="hud-range live-setting" data-setting="titleParallax" type="range" min="0" max="0.32" step="0.01" value="0.16">
+                    <span class="setting-value" data-value-for="titleParallax">0.16</span>
+                    <label for="setting-title-sparkle">Sparkles</label>
+                    <input id="setting-title-sparkle" class="hud-range live-setting" data-setting="titleSparkle" type="range" min="0" max="1.5" step="0.01" value="1">
+                    <span class="setting-value" data-value-for="titleSparkle">1.00</span>
+                    <label for="setting-title-prism">Prism flow</label>
+                    <input id="setting-title-prism" class="hud-range live-setting" data-setting="titlePrism" type="range" min="0" max="1.4" step="0.01" value="0.85">
+                    <span class="setting-value" data-value-for="titlePrism">0.85</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Environment and lights <i class="ph ph-sun-horizon" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-quality-preset">Quality</label>
+                    <select id="setting-quality-preset" class="hud-select live-setting" data-setting="qualityPreset">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="cinematic">Cinematic</option>
+                    </select>
+                    <span class="setting-value" data-value-for="qualityPreset">medium</span>
+                    <label for="setting-global-illumination">Global illum.</label>
+                    <input id="setting-global-illumination" class="live-setting" data-setting="globalIllumination" type="checkbox">
+                    <span class="setting-value" data-value-for="globalIllumination">off</span>
+                    <label for="setting-local-light">Top light</label>
+                    <input id="setting-local-light" class="hud-range live-setting" data-setting="topLight" type="range" min="0" max="6" step="0.05" value="6">
+                    <span class="setting-value" data-value-for="topLight">6.00</span>
+                    <label for="setting-blue-glow">Blue glow</label>
+                    <input id="setting-blue-glow" class="hud-range live-setting" data-setting="blueGlow" type="range" min="0" max="8" step="0.05" value="5.2">
+                    <span class="setting-value" data-value-for="blueGlow">5.20</span>
+                    <label for="setting-purple-glow">Purple glow</label>
+                    <input id="setting-purple-glow" class="hud-range live-setting" data-setting="purpleGlow" type="range" min="0" max="5" step="0.05" value="1.8">
+                    <span class="setting-value" data-value-for="purpleGlow">1.80</span>
+                    <label for="setting-grid-visible">Grid</label>
+                    <input id="setting-grid-visible" class="live-setting" data-setting="gridVisible" type="checkbox">
+                    <span class="setting-value" data-value-for="gridVisible">off</span>
+                    <label for="setting-solid-floor">Solid floor</label>
+                    <input id="setting-solid-floor" class="live-setting" data-setting="solidFloor" type="checkbox">
+                    <span class="setting-value" data-value-for="solidFloor">off</span>
+                    <label for="setting-floor-color">Floor color</label>
+                    <input id="setting-floor-color" class="hud-color live-setting" data-setting="floorColor" type="color" value="#090d14">
+                    <span class="setting-value" data-value-for="floorColor">#090d14</span>
+                    <label for="setting-bg-color">BG color</label>
+                    <input id="setting-bg-color" class="hud-color live-setting" data-setting="backgroundColor" type="color" value="#000000">
+                    <span class="setting-value" data-value-for="backgroundColor">#000000</span>
+                    <label for="setting-bg-alpha">BG alpha</label>
+                    <input id="setting-bg-alpha" class="hud-range live-setting" data-setting="backgroundAlpha" type="range" min="0" max="1" step="0.01" value="1">
+                    <span class="setting-value" data-value-for="backgroundAlpha">1.00</span>
+                    <label for="setting-lamp-glow">Lamp glow</label>
+                    <input id="setting-lamp-glow" class="hud-range live-setting" data-setting="lampGlow" type="range" min="0" max="4" step="0.05" value="2.4">
+                    <span class="setting-value" data-value-for="lampGlow">2.40</span>
+                    <label for="setting-blackhole-nonorbit">Hero video</label>
+                    <input id="setting-blackhole-nonorbit" class="live-setting" data-setting="blackholeNonOrbit" type="checkbox">
+                    <span class="setting-value" data-value-for="blackholeNonOrbit">orbit</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Project text <i class="ph ph-textbox" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-project-plane">Glass plane</label>
+                    <input id="setting-project-plane" class="live-setting" data-setting="projectGlassPlane" type="checkbox" checked>
+                    <span class="setting-value" data-value-for="projectGlassPlane">on</span>
+                    <label for="setting-project-font">Font preset</label>
+                    <select id="setting-project-font" class="hud-select live-setting" data-setting="projectFontPreset">
+                        <option value="playfair">Editorial Serif</option>
+                        <option value="cinematic">Cinematic Serif</option>
+                        <option value="modern">Modern Sans</option>
+                        <option value="system">System Clean</option>
+                    </select>
+                    <span class="setting-value" data-value-for="projectFontPreset">playfair</span>
+                    <label for="setting-project-title-size">Title size</label>
+                    <input id="setting-project-title-size" class="hud-range live-setting" data-setting="projectTitleSize" type="range" min="18" max="96" step="1" value="37">
+                    <span class="setting-value" data-value-for="projectTitleSize">37</span>
+                    <label for="setting-project-body-size">Body size</label>
+                    <input id="setting-project-body-size" class="hud-range live-setting" data-setting="projectBodySize" type="range" min="9" max="24" step="1" value="17">
+                    <span class="setting-value" data-value-for="projectBodySize">17</span>
+                    <label for="setting-project-width">Text width</label>
+                    <input id="setting-project-width" class="hud-range live-setting" data-setting="projectTextWidth" type="range" min="340" max="720" step="10" value="500">
+                    <span class="setting-value" data-value-for="projectTextWidth">500</span>
+                    <label for="setting-project-text-y">Y angle</label>
+                    <input id="setting-project-text-y" class="hud-range live-setting" data-setting="projectTextRotateY" type="range" min="-18" max="18" step="0.5" value="13">
+                    <span class="setting-value" data-value-for="projectTextRotateY">13</span>
+                    <label for="project-text-target">Edit project</label>
+                    <select id="project-text-target" class="hud-select">
+                        <option value="geo">GeoIntel</option>
+                        <option value="iran">Iran Protest</option>
+                        <option value="history">Iran History</option>
+                        <option value="timeline">Timeline</option>
+                        <option value="animations">Animations</option>
+                    </select>
+                    <span class="setting-value">text</span>
+                </div>
+                <div class="px-[11px] pb-[11px]">
+                    <label class="mb-1 block text-[11px] font-bold text-white/56" for="project-description-editor">Selected project description</label>
+                    <textarea id="project-description-editor" class="hud-input" spellcheck="true"></textarea>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Holograms and particles <i class="ph ph-sparkle" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-project-target">Project</label>
+                    <select id="setting-project-target" class="hud-select live-setting" data-setting="selectedProject">
+                        <option value="geo">GeoIntel</option>
+                        <option value="iran">Iran Protest</option>
+                        <option value="history">Iran History</option>
+                        <option value="timeline">Timeline</option>
+                        <option value="animations">Animations</option>
+                    </select>
+                    <span class="setting-value" data-value-for="selectedProject">geo</span>
+                    <label for="setting-holo-color">Holo color</label>
+                    <input id="setting-holo-color" class="hud-color live-setting" data-setting="hologramColor" type="color" value="#61f5ff">
+                    <span class="setting-value" data-value-for="hologramColor">#61f5ff</span>
+                    <label for="setting-holo-opacity">Opacity</label>
+                    <input id="setting-holo-opacity" class="hud-range live-setting" data-setting="hologramOpacity" type="range" min="0.08" max="1" step="0.01" value="0.58">
+                    <span class="setting-value" data-value-for="hologramOpacity">0.58</span>
+                    <label for="setting-holo-spin">Spin</label>
+                    <input id="setting-holo-spin" class="hud-range live-setting" data-setting="hologramSpin" type="range" min="-0.02" max="0.02" step="0.0005" value="0.004">
+                    <span class="setting-value" data-value-for="hologramSpin">0.004</span>
+                    <label for="setting-holo-bob">Bob</label>
+                    <input id="setting-holo-bob" class="live-setting" data-setting="hologramBob" type="checkbox" checked>
+                    <span class="setting-value" data-value-for="hologramBob">on</span>
+                    <label for="setting-particle-opacity">Particles</label>
+                    <input id="setting-particle-opacity" class="hud-range live-setting" data-setting="particleOpacity" type="range" min="0" max="1.4" step="0.01" value="0.82">
+                    <span class="setting-value" data-value-for="particleOpacity">0.82</span>
+                    <label for="setting-particle-speed">Flow speed</label>
+                    <input id="setting-particle-speed" class="hud-range live-setting" data-setting="particleSpeed" type="range" min="0.25" max="2.5" step="0.05" value="1">
+                    <span class="setting-value" data-value-for="particleSpeed">1.00</span>
+                    <label for="setting-particle-spread">Flow spread</label>
+                    <input id="setting-particle-spread" class="hud-range live-setting" data-setting="particleSpread" type="range" min="0.25" max="2.2" step="0.05" value="1">
+                    <span class="setting-value" data-value-for="particleSpread">1.00</span>
+                    <label for="setting-particle-size">Particle size</label>
+                    <input id="setting-particle-size" class="hud-range live-setting" data-setting="particleSize" type="range" min="0.01" max="0.2" step="0.001" value="0.2">
+                    <span class="setting-value" data-value-for="particleSize">0.200</span>
+                    <label for="setting-particle-shape">Shape pull</label>
+                    <input id="setting-particle-shape" class="hud-range live-setting" data-setting="particleShapeAttraction" type="range" min="0" max="1.4" step="0.05" value="0.85">
+                    <span class="setting-value" data-value-for="particleShapeAttraction">0.85</span>
+                    <label for="setting-screen-opacity">Screen alpha</label>
+                    <input id="setting-screen-opacity" class="hud-range live-setting" data-setting="screenOpacity" type="range" min="0.25" max="1" step="0.01" value="0.42">
+                    <span class="setting-value" data-value-for="screenOpacity">0.42</span>
+                    <label for="setting-screen-brightness">Screen bright</label>
+                    <input id="setting-screen-brightness" class="hud-range live-setting" data-setting="screenBrightness" type="range" min="0.5" max="2" step="0.01" value="1.3">
+                    <span class="setting-value" data-value-for="screenBrightness">1.30</span>
+                    <label for="setting-screen-saturation">Screen color</label>
+                    <input id="setting-screen-saturation" class="hud-range live-setting" data-setting="screenSaturation" type="range" min="0" max="2" step="0.01" value="1.63">
+                    <span class="setting-value" data-value-for="screenSaturation">1.63</span>
+                </div>
+            </details>
+            <details class="hud-details">
+                <summary>Flying carpet <i class="ph ph-magic-wand" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label>Intensity</label><input class="hud-range live-setting" data-setting="carpetIntensity" type="range" min="0" max="2.5" step="0.01" value="1"><span class="setting-value" data-value-for="carpetIntensity">1.00</span>
+                    <label>Amplitude</label><input class="hud-range live-setting" data-setting="carpetAmplitude" type="range" min="0" max="0.8" step="0.01" value="0.22"><span class="setting-value" data-value-for="carpetAmplitude">0.22</span>
+                    <label>Wavelength</label><input class="hud-range live-setting" data-setting="carpetWavelength" type="range" min="0.6" max="5.5" step="0.01" value="2.55"><span class="setting-value" data-value-for="carpetWavelength">2.55</span>
+                    <label>Speed</label><input class="hud-range live-setting" data-setting="carpetSpeed" type="range" min="0" max="5" step="0.01" value="1.25"><span class="setting-value" data-value-for="carpetSpeed">1.25</span>
+                    <label>Direction</label><input class="hud-range live-setting" data-setting="carpetDirection" type="range" min="0" max="360" step="1" value="28"><span class="setting-value" data-value-for="carpetDirection">28</span>
+                    <label>Edge curl</label><input class="hud-range live-setting" data-setting="carpetEdgeCurl" type="range" min="0" max="0.75" step="0.01" value="0.18"><span class="setting-value" data-value-for="carpetEdgeCurl">0.18</span>
+                    <label>Hover lift</label><input class="hud-range live-setting" data-setting="carpetHoverLift" type="range" min="0" max="0.9" step="0.01" value="0.28"><span class="setting-value" data-value-for="carpetHoverLift">0.28</span>
+                    <label>Hover radius</label><input class="hud-range live-setting" data-setting="carpetHoverRadius" type="range" min="0" max="2.8" step="0.01" value="1.12"><span class="setting-value" data-value-for="carpetHoverRadius">1.12</span>
+                    <label>Texture light</label><input class="hud-range live-setting" data-setting="carpetTextureBrightness" type="range" min="0.25" max="1.3" step="0.01" value="1.3"><span class="setting-value" data-value-for="carpetTextureBrightness">1.30</span>
+                    <label>Hue shift</label><input class="hud-range live-setting" data-setting="carpetHueShift" type="range" min="-180" max="180" step="1" value="0"><span class="setting-value" data-value-for="carpetHueShift">0</span>
+                    <label>Silk sheen</label><input class="hud-range live-setting" data-setting="carpetSilkSheen" type="range" min="0" max="1" step="0.01" value="1"><span class="setting-value" data-value-for="carpetSilkSheen">1.00</span>
+                    <label>Sheen opacity</label><input class="hud-range live-setting" data-setting="carpetSilkSheenOpacity" type="range" min="0" max="1" step="0.01" value="0.5"><span class="setting-value" data-value-for="carpetSilkSheenOpacity">0.50</span>
+                    <label>Highlight opacity</label><input class="hud-range live-setting" data-setting="carpetHighlightOpacity" type="range" min="0" max="1" step="0.01" value="0"><span class="setting-value" data-value-for="carpetHighlightOpacity">0.00</span>
+                    <label>Fringe swing</label><input class="hud-range live-setting" data-setting="carpetFringeSwing" type="range" min="0" max="1.8" step="0.01" value="0.22"><span class="setting-value" data-value-for="carpetFringeSwing">0.22</span>
+                    <label>Fringe density</label><input class="hud-range live-setting" data-setting="carpetFringeDensity" data-rebuild-carpet="true" type="range" min="0.7" max="5" step="0.1" value="5"><span class="setting-value" data-value-for="carpetFringeDensity">5.0</span>
+                    <label>Fringe length</label><input class="hud-range live-setting" data-setting="carpetFringeLength" data-rebuild-carpet="true" type="range" min="0.08" max="0.42" step="0.01" value="0.08"><span class="setting-value" data-value-for="carpetFringeLength">0.08</span>
+                    <label>String stiffness</label><input class="hud-range live-setting" data-setting="carpetFringeStiffness" type="range" min="0.15" max="1" step="0.01" value="0.62"><span class="setting-value" data-value-for="carpetFringeStiffness">0.62</span>
+                    <label>String gravity</label><input class="hud-range live-setting" data-setting="carpetFringeGravity" type="range" min="0" max="1.5" step="0.01" value="0.42"><span class="setting-value" data-value-for="carpetFringeGravity">0.42</span>
+                    <label>Self collision</label><input class="live-setting" data-setting="carpetSelfCollision" type="checkbox" checked><span class="setting-value" data-value-for="carpetSelfCollision">on</span>
+                    <label>Collision thickness</label><input class="hud-range live-setting" data-setting="carpetCollisionThickness" type="range" min="0.04" max="0.2" step="0.01" value="0.2"><span class="setting-value" data-value-for="carpetCollisionThickness">0.20</span>
+                </div>
+            </details>
+            <details class="hud-details">
+                <summary>Hourglass import <i class="ph ph-hourglass" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label>Timer speed</label><select class="hud-select live-setting" data-setting="hourglassTimerSeconds"><option value="30">30 sec</option><option value="60" selected>1 min</option><option value="300">5 min</option><option value="3600">1 hr</option></select><span class="setting-value" data-value-for="hourglassTimerSeconds">60</span>
+                    <label>Stream thickness</label><input class="hud-range live-setting" data-setting="hourglassStreamThickness" type="range" min="0.15" max="2" step="0.01" value="0.42"><span class="setting-value" data-value-for="hourglassStreamThickness">0.42</span>
+                    <label>Stream overlap</label><input class="hud-range live-setting" data-setting="hourglassStreamOverlap" type="range" min="0" max="0.35" step="0.005" value="0.135"><span class="setting-value" data-value-for="hourglassStreamOverlap">0.135</span>
+                    <label>Glass tint</label><input class="hud-range live-setting" data-setting="hourglassTint" type="range" min="0" max="1" step="0.01" value="1"><span class="setting-value" data-value-for="hourglassTint">1.00</span>
+                    <label>Opacity</label><input class="hud-range live-setting" data-setting="hourglassGlassOpacity" type="range" min="0.08" max="0.55" step="0.01" value="0.55"><span class="setting-value" data-value-for="hourglassGlassOpacity">0.55</span>
+                    <label>Wall thickness</label><input class="hud-range live-setting" data-setting="hourglassWallThickness" type="range" min="0.05" max="0.22" step="0.005" value="0.06"><span class="setting-value" data-value-for="hourglassWallThickness">0.060</span>
+                    <label>Body flare</label><input class="hud-range live-setting" data-setting="hourglassFlare" type="range" min="0" max="0.45" step="0.01" value="0.45"><span class="setting-value" data-value-for="hourglassFlare">0.45</span>
+                    <label>Outer bottleneck</label><input class="hud-range live-setting" data-setting="hourglassNeck" type="range" min="0.24" max="0.62" step="0.01" value="0.46"><span class="setting-value" data-value-for="hourglassNeck">0.46</span>
+                    <label>Sand aperture</label><input class="hud-range live-setting" data-setting="hourglassAperture" type="range" min="0.03" max="0.2" step="0.005" value="0.2"><span class="setting-value" data-value-for="hourglassAperture">0.200</span>
+                    <label>Hyperbola degree</label><input class="hud-range live-setting" data-setting="hourglassCurve" type="range" min="0.65" max="1.8" step="0.01" value="1.21"><span class="setting-value" data-value-for="hourglassCurve">1.21</span>
+                    <label>Columns</label><input class="live-setting" data-setting="hourglassColumns" type="checkbox" checked><span class="setting-value" data-value-for="hourglassColumns">on</span>
+                </div>
+            </details>
+        </div>
+    </aside>
+
+    <nav class="site-nav fixed top-0 left-0 right-0 z-30 px-3">
+        <div class="nav-inner liquid-glass mx-auto flex w-full max-w-7xl items-center justify-between gap-5 px-5 md:px-8">
+            <a href="#" class="font-display text-xl font-semibold tracking-normal text-white">Pouya AI</a>
+            <div class="hidden items-center gap-6 text-xs font-semibold md:flex">
+                <a href="#project-viewer" class="nav-link">Genie Projection</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="https://pouyaii.github.io/" target="_blank" class="nav-link">Geo Intel</a>
+                <a href="https://pouyaii.github.io/Iran/" target="_blank" class="nav-link">Iran Map</a>
+            </div>
+            <a href="https://github.com/pouyaii" target="_blank" class="liquid-action hidden md:inline-flex">
+                <i class="ph ph-github-logo text-lg" aria-hidden="true"></i>
+                GitHub
             </a>
         </div>
     </nav>
 
-    <!-- Main Container -->
-    <main class="pt-40 pb-20 max-w-7xl mx-auto px-6 flex flex-col items-center">
-        
-        <!-- Hero Section -->
-        <section class="text-center mb-24 reveal w-full flex flex-col items-center">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-accent/10 border border-brand-accent/20 text-brand-accent text-xs font-bold uppercase tracking-widest mb-8 font-sans">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-accent"></span>
-                </span>
-                Digital Heritage & Intelligence
+    <main class="site-shell relative z-10">
+        <section class="hero px-5 text-center md:px-8">
+            <h1 class="sr-only">Pouya AI</h1>
+            <div id="title-fallback" class="hero-title-fallback" aria-hidden="true">Pouya AI</div>
+            <div class="hero-copy reveal">
+                <div class="eyebrow liquid-glass mb-5">
+                    <span class="h-2 w-2 rounded-full bg-brand-cyan shadow-[0_0_18px_rgba(97,245,255,0.9)]"></span>
+                    Digital Heritage & Intelligence
+                </div>
+                <p class="mx-auto mb-8 max-w-2xl text-base leading-8 text-white/64 md:text-lg">
+                    A portfolio exploring AI, data visualization, politics, and history through immersive spatial interfaces.
+                </p>
+                <a href="#project-viewer" class="scroll-cue liquid-glass" aria-label="Scroll to genie projection"><span></span></a>
             </div>
-            
-            <!-- Title -->
-            <h1 class="text-6xl md:text-9xl font-display font-medium tracking-tight mb-8 leading-tight pb-4 text-shimmer">
-                Pouya AI
-            </h1>
-            
-            <p class="text-lg text-white/40 max-w-3xl mx-auto font-light leading-relaxed mb-16 font-sans">
-                A portfolio exploring the intersection of AI, data visualization, politics and history. Experience interactive maps, spannable timelines, and insightful charts.
-            </p>
-            
-            <!-- Animated Downward Arrows "VVV" -->
-            <a href="#grid" class="flex flex-col items-center gap-[-5px] opacity-70 hover:opacity-100 transition-opacity cursor-pointer">
-                <i class="ph ph-caret-down text-3xl text-brand-cyan scroll-chevron"></i>
-                <i class="ph ph-caret-down text-3xl text-brand-cyan scroll-chevron -mt-4"></i>
-                <i class="ph ph-caret-down text-3xl text-brand-cyan scroll-chevron -mt-4"></i>
-            </a>
         </section>
 
-        <!-- Dynamic Bento Grid -->
-        <section id="grid" class="w-full grid grid-cols-1 md:grid-cols-12 gap-6 mb-16 reveal">
-            
-            <!-- 1. Large Main Card: Geo Intel (Blue Theme) -->
-            <a href="https://pouyaii.github.io/" target="_blank" 
-               class="group md:col-span-8 bento-card rounded-[2.5rem] p-10 flex flex-col justify-between min-h-[400px]"
-               style="--border-color: rgba(0, 102, 255, 0.5); --glow-color: rgba(0, 102, 255, 0.2);">
-                <div class="flex justify-between items-start">
-                    <div class="w-16 h-16 rounded-2xl bg-brand-accent/20 flex items-center justify-center text-brand-accent">
-                        <i class="ph ph-globe-hemisphere-west text-4xl"></i>
-                    </div>
-                    <div class="px-4 py-1.5 rounded-full bg-brand-accent/10 border border-brand-accent/20 text-brand-accent text-xs font-bold uppercase tracking-widest flex items-center gap-2 group-hover:bg-brand-accent group-hover:text-black transition-colors font-sans">
-                        Launch App <i class="ph ph-arrow-up-right"></i>
-                    </div>
-                </div>
-                <div>
-                    <!-- Corrected Title Hover Color -->
-                    <h2 class="text-4xl font-display font-semibold mb-4 tracking-tight group-hover:text-brand-accent transition-colors">Geo Intel</h2>
-                    <p class="text-white/50 text-lg max-w-xl group-hover:text-white/80 transition-colors font-sans">
-                        Geo Intel is a dynamic mapping application that visualizes complex geopolitical and economic data. Users can explore various modes, such as the International Relations view, which details bilateral ties between all nations—including contextual explanations for their diplomatic status. The Economics view visualizes and tracks various GDP economic data for all countries. The app features many more views included ones for demographics, conflict, natural resources, world leaders, political systems and more.
-                    </p>
-                </div>
-            </a>
+        <section id="project-viewer" class="projection-story">
+            <div class="projection-sticky">
+                <div class="projection-copy-shell">
+                    <div class="projection-panel-wrap">
+                        <article class="projection-panel geo liquid-glass active" data-project-card="geo">
+                            <div class="project-kicker">Genie Projection 01</div>
+                            <h2 class="project-title">GeoIntel Interactive</h2>
+                            <p class="project-copy">
+                                GeoIntel Interactive is a geopolitical intelligence platform that turns global affairs data into an explorable map-based interface. The project brings together international relations, economic indicators, political systems, demographics, conflicts, strategic assets, natural resources, critical infrastructure, world leaders, and emerging AI capabilities into one interactive environment. Users can switch between thematic views, compare countries, inspect bilateral relationships, and explore how geography, power, resources, and institutions overlap. It is designed as both a data visualization experiment and a prototype for a more intuitive way to study the world.
+                            </p>
+                            <a href="https://pouyaii.github.io/" target="_blank" class="liquid-action liquid-glass">Launch Geo Intel <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                        </article>
 
-            <!-- 2. Vertical Card: Iran Protest Map (Red Theme) -->
-            <a href="https://pouyaii.github.io/Iran/" target="_blank" 
-               class="group md:col-span-4 bento-card rounded-[2.5rem] p-10 flex flex-col justify-between min-h-[400px]"
-               style="--border-color: rgba(239, 68, 68, 0.5); --glow-color: rgba(239, 68, 68, 0.2);">
-                <div class="flex justify-between items-start">
-                    <div class="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500">
-                        <i class="ph ph-map-pin-line text-4xl"></i>
-                    </div>
-                    <!-- Updated Button to Red -->
-                    <div class="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 group-hover:bg-red-500 group-hover:text-black transition-colors font-sans">
-                        Launch App <i class="ph ph-arrow-up-right"></i>
-                    </div>
-                </div>
-                <div>
-                    <h2 class="text-3xl font-display font-semibold mb-4 tracking-tight group-hover:text-red-400 transition-colors">Iran Protest Map</h2>
-                    <p class="text-white/50 group-hover:text-white/80 transition-colors font-sans text-sm leading-relaxed">
-                        This platform geolocates footage from recent protests in Iran on an interactive map. It features a timeline and charts which provide insights into the effectiveness of the internet shutdown as well as comparisons with previous periods of unrest. For transparency, verified and unverified footage is distinguished and varying estimates are given for deaths and arrests along with linked sources.
-                    </p>
-                </div>
-            </a>
+                        <article class="projection-panel iran liquid-glass" data-project-card="iran">
+                            <div class="project-kicker text-red-200">Genie Projection 02</div>
+                            <h2 class="project-title">Iran Protest Map</h2>
+                            <p class="project-copy">
+                                The Iran Protest Map is an interactive incident-tracking platform built to document and visualize protest activity across Iran. It geolocates protest footage, organizes incidents by time and place, and uses timelines, charts, and source links to help users understand the scale and spread of unrest. The project distinguishes between verified and unverified material, while also presenting varying estimates for deaths, arrests, and internet shutdown effects. It combines open-source research, mapping, and visual analysis to make fragmented protest evidence more transparent and easier to navigate.
+                            </p>
+                            <a href="https://pouyaii.github.io/Iran/" target="_blank" class="liquid-action liquid-glass">Launch Iran Map <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                        </article>
 
-            <!-- 3. Small Card: History Layered (Cyan Theme) -->
-            <a href="https://pouyaii.github.io/Iran-History/" target="_blank" 
-               class="group md:col-span-4 bento-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px]"
-               style="--border-color: rgba(0, 240, 255, 0.5); --glow-color: rgba(0, 240, 255, 0.2);">
-                <div class="flex justify-between items-start">
-                    <div class="w-12 h-12 rounded-xl bg-brand-cyan/20 flex items-center justify-center text-brand-cyan">
-                        <i class="ph ph-stack text-2xl"></i>
-                    </div>
-                    <!-- Button already Cyan -->
-                    <div class="px-3 py-1.5 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 group-hover:bg-brand-cyan group-hover:text-black transition-colors font-sans">
-                        Launch App <i class="ph ph-arrow-up-right"></i>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-display font-semibold tracking-tight mb-2 group-hover:text-brand-cyan transition-colors">History Layered</h3>
-                    <p class="text-sm text-white/40 font-sans">
-                        Visualizing the entirety of Iranian history as a stratigraphic cross-section, with historical eras stacked as layers proportional to their duration. Drawing on the metaphor of sedimentary rock layers, this interactive experience illustrates the immense depth, longevity, and continuity of Iranian civilization.
-                    </p>
-                </div>
-            </a>
+                        <article class="projection-panel history liquid-glass" data-project-card="history">
+                            <div class="project-kicker text-amber-100">Genie Projection 03</div>
+                            <h2 class="project-title">History of Iran Layered</h2>
+                            <p class="project-copy">
+                                History of Iran Layered reimagines Iranian history as a geological cross-section, with dynasties and eras stacked like sedimentary layers across time. Beginning with ancient Proto-Elamite civilization and continuing into the Islamic Republic, the project uses proportional visual layers to show the extraordinary depth, continuity, rupture, and recurrence within Iranian civilization. Users can zoom, pan, adjust labels, toggle flags, and compare overlapping periods of rule. It is part historical timeline, part digital heritage artwork, and part experiment in making long civilizational history physically intuitive.
+                            </p>
+                            <a href="#" class="liquid-action liquid-glass">Preview Concept <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                        </article>
 
-            <!-- 4. Small Card: Tech & Politics Timeline (Purple Theme) -->
-            <a href="https://pouyaii.github.io/Timelines/" target="_blank" 
-               class="group md:col-span-4 bento-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px]"
-               style="--border-color: rgba(192, 132, 252, 0.5); --glow-color: rgba(192, 132, 252, 0.2);">
-                <div class="flex justify-between items-start">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
-                        <i class="ph ph-sliders-horizontal text-2xl"></i>
-                    </div>
-                    <!-- Updated Button to Purple -->
-                    <div class="px-3 py-1.5 rounded-full bg-purple-400/10 border border-purple-400/20 text-purple-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 group-hover:bg-purple-400 group-hover:text-black transition-colors font-sans">
-                        Launch App <i class="ph ph-arrow-up-right"></i>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-2xl font-display font-semibold tracking-tight mb-2 group-hover:text-purple-400 transition-colors">
-                        Tech <span class="classic-amp">&</span> Politics Timeline
-                    </h3>
-                    <p class="text-sm text-white/40 font-sans">
-                         This interactive chart explores the intersection of innovation and governance. By plotting major technological inventions alongside key milestones in political history, this application highlights the correlation between technological advancement and the evolution of increasingly complex political systems. The timeline highlights the need for new political systems to account for new leaps in technology.
-                    </p>
-                </div>
-            </a>
+                        <article class="projection-panel timeline liquid-glass" data-project-card="timeline">
+                            <div class="project-kicker text-violet-100">Genie Projection 04</div>
+                            <h2 class="project-title">Tech & Politics Timeline</h2>
+                            <p class="project-copy">
+                                The Tech & Politics Timeline explores how technological change and political order evolve beside each other. By placing major inventions, scientific breakthroughs, communications systems, weapons, institutions, revolutions, and governance milestones onto a shared historical timeline, the project visualizes the long relationship between innovation and political complexity. Its core idea is that technology does not simply advance society, it repeatedly forces political systems to adapt, lag behind, or break. The result is a broad interactive map of civilization's recurring struggle to govern new forms of power.
+                            </p>
+                            <a href="#" class="liquid-action liquid-glass">Preview Timeline <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+                        </article>
 
-            <!-- 5. Small Card: Animations (Pink Theme) -->
-            <a href="https://www.instagram.com/pouyaaai/" target="_blank" 
-               class="group md:col-span-4 bento-card rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[300px] hover:bg-white/5"
-               style="--border-color: rgba(236, 72, 153, 0.5); --glow-color: rgba(236, 72, 153, 0.2);">
-                <div class="flex justify-between items-start">
-                    <div class="w-12 h-12 rounded-xl bg-pink-600/20 flex items-center justify-center text-pink-500 border border-pink-500/20">
-                        <i class="ph ph-film-strip text-2xl"></i>
-                    </div>
-                    <div class="px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 group-hover:bg-pink-600 group-hover:text-white transition-colors font-sans">
-                        Instagram <i class="ph ph-arrow-up-right"></i>
+                        <article class="projection-panel animations liquid-glass" data-project-card="animations">
+                            <div class="project-kicker text-cyan-100">Genie Projection 05</div>
+                            <h2 class="project-title">AI Animations</h2>
+                            <p class="project-copy">
+                                AI Animations is a collection of cinematic short-form videos focused on creating historically accurate glimpses into the past. Built with AI image generation, animation tools, editing software, sound, transitions, and visual storytelling, the project experiments with reconstructing historical worlds in a way that feels vivid, immersive, and visually grounded. Most pieces focus on Iranian civilization, history, and related cultural themes, blending research with atmosphere and spectacle. The project sits between digital art, public history, and AI filmmaking, using new tools to make the past feel alive again.
+                            </p>
+                            <a href="https://www.instagram.com/pouya_aii/" target="_blank" class="liquid-action liquid-glass instagram-action">INSTAGRAM <i class="ph ph-instagram-logo" aria-hidden="true"></i></a>
+                        </article>
                     </div>
                 </div>
-                <div>
-                    <h3 class="text-2xl font-display font-semibold tracking-tight mb-2 group-hover:text-pink-400 transition-colors">Animations</h3>
-                    <p class="text-sm text-white/40 font-sans group-hover:text-white/60">View my video animations featuring historical and cultural themes.</p>
-                </div>
-            </a>
+            </div>
         </section>
 
-        <!-- About / Footer Section -->
-        <section id="about" class="w-full mb-12 reveal">
-            <div class="bento-card rounded-[3rem] p-1 bg-gradient-to-br from-brand-accent/20 via-transparent to-transparent">
-                <div class="bg-black/80 rounded-[2.9rem] p-8 md:p-16 flex flex-col items-center text-center overflow-hidden relative">
-                    <!-- Background light effect -->
-                    <div class="absolute top-0 w-full h-full bg-brand-accent/5 blur-[100px] rounded-full"></div>
-                    
-                    <div class="z-10 max-w-3xl">
-                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/5 border border-white/10 text-white mb-8">
-                            <i class="ph ph-fingerprint text-4xl"></i>
-                        </div>
-                        <h2 class="text-4xl md:text-5xl font-display font-semibold mb-6 tracking-tight">A New Generation of Software</h2>
-                        <p class="text-white/50 text-lg mb-10 leading-relaxed font-sans">
-                            These applications represent a journey into data-driven storytelling and interactive web experiences. By leveraging modern web technologies and AI, we can unlock new media and software possibilities.
+        <section id="about" class="content-band">
+            <div class="mx-auto max-w-7xl reveal">
+                <div class="about-rule mb-12"></div>
+                <div class="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-center">
+                    <div>
+                        <div class="section-kicker mb-3">About</div>
+                        <h2 class="font-display text-4xl font-semibold tracking-normal md:text-6xl">Interactive digital projects for research, history, and global affairs.</h2>
+                    </div>
+                    <div class="grid gap-6 text-base leading-8 text-white/58">
+                        <p>
+                            I build interactive digital projects that combine art, politics, history, data visualization, design, and AI-assisted software creation. My work focuses on turning complex ideas into explorable visual experiences, from geopolitical mapping tools and historical timelines to cinematic AI animations and experimental web interfaces.
+                        </p>
+                        <p>
+                            These applications represent a journey into AI-driven storytelling and interactive web experiences. By leveraging modern web technologies and AI, software can increasingly be created on demand around specific ideas, questions, and creative visions. Instead of being limited to static articles, videos, or dashboards, new tools make it possible to build custom digital experiences that let users explore information directly.
+                        </p>
+                        <p>
+                            This portfolio is an ongoing experiment in that new generation of software: using AI, code, design, and visual art to make research, history, and global affairs more intuitive, immersive, and alive.
                         </p>
                     </div>
                 </div>
+                <div class="about-rule mt-12"></div>
             </div>
         </section>
 
-        <!-- Ticker Style Footer -->
-        <footer class="w-full border-t border-white/10 pt-20 pb-20 reveal">
-            <div class="flex flex-col items-center gap-12 text-center">
-                <div class="text-4xl font-display font-semibold tracking-tighter italic text-white/20">Pouya AI</div>
-                
-                <div class="w-full max-w-5xl flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-white/30 font-medium font-sans px-4">
-                    <span class="hover:text-white transition-colors cursor-default">Artificial Intelligence</span>
-                    <span class="hover:text-white transition-colors cursor-default">Global Affairs</span>
-                    <span class="hover:text-white transition-colors cursor-default">Politics</span>
-                    <span class="hover:text-white transition-colors cursor-default">History</span>
-                    <span class="hover:text-white transition-colors cursor-default">Economics</span>
-                    <span class="hover:text-white transition-colors cursor-default">Culture</span>
-                    <span class="hover:text-white transition-colors cursor-default">Art</span>
-                    <span class="hover:text-white transition-colors cursor-default">Technology</span>
-                    <span class="hover:text-white transition-colors cursor-default">Data Visualization</span>
-                    <span class="hover:text-white transition-colors cursor-default">Mapping</span>
-                    <span class="hover:text-white transition-colors cursor-default">Animations</span>
-                    <span class="hover:text-white transition-colors cursor-default">Software</span>
-                    <span class="hover:text-white transition-colors cursor-default">Dynamic</span>
+        <footer class="px-5 pb-16 pt-4 md:px-8">
+            <div class="mx-auto flex max-w-7xl flex-col gap-8 border-t border-white/10 pt-10 text-center md:flex-row md:items-center md:justify-between md:text-left">
+                <div class="font-display text-3xl font-semibold italic text-white/28">Pouya AI</div>
+                <div class="flex flex-wrap justify-center gap-x-5 gap-y-3 text-xs font-semibold text-white/38 md:justify-end">
+                    <span>Artificial Intelligence</span>
+                    <span>Global Affairs</span>
+                    <span>History</span>
+                    <span>Data Visualization</span>
+                    <span>3D Web</span>
+                    <span>Interactive Media</span>
                 </div>
             </div>
         </footer>
-
     </main>
 
-    <script>
-        // --- Starfield Engine with Warp Drive & Shooting Stars ---
-        const canvas = document.getElementById('star-canvas');
-        const ctx = canvas.getContext('2d');
+    <div id="projection-video-controls" class="projection-video-controls" aria-hidden="true">
+        <button id="projection-video-prev" class="projection-video-button prev liquid-glass" type="button" aria-label="Previous animation"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+        <button id="projection-video-audio" class="projection-video-button audio liquid-glass" type="button" aria-label="Unmute animation"><i class="ph ph-speaker-slash" aria-hidden="true"></i></button>
+        <button id="projection-video-pause" class="projection-video-button pause liquid-glass" type="button" aria-label="Pause animation"><i class="ph ph-pause" aria-hidden="true"></i></button>
+        <button id="projection-video-next" class="projection-video-button next liquid-glass" type="button" aria-label="Next animation"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+    </div>
+    <div id="camera-timeline-dock" class="camera-timeline-dock liquid-glass" aria-label="Camera sequence timeline">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <div class="text-[10px] uppercase tracking-[0.12em] text-brand-cyan/80 font-extrabold">Scroll Camera Sequence</div>
+                <div class="text-xs text-white/56">The full strip maps to the page scroll range.</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="timeline-expand-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-corners-out" aria-hidden="true"></i></button>
+                <button id="timeline-add-keyframe-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-plus-circle" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div id="timeline-track" class="timeline-track">
+            <div id="timeline-playhead" class="timeline-playhead"></div>
+        </div>
+    </div>
+    <div id="heart-burst" class="heart-burst" aria-hidden="true">&#9829;</div>
 
-        let width, height;
-        let stars = [];
-        let shootingStars = [];
-
-        // Configuration
-        const STAR_COUNT = 500;
-        const BASE_STAR_SPEED = 15; // Base Speed of travel (z-axis) at top of page
-        let currentStarSpeed = BASE_STAR_SPEED;
-        
-        // Resize Canvas
-        function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-        }
-
-        // Scroll Speed Handler
-        function handleScroll() {
-            const scrollTop = window.scrollY;
-            const docHeight = document.body.scrollHeight - window.innerHeight;
-            // Calculate scroll percentage (0 to 1)
-            const scrollPercent = docHeight > 0 ? Math.min(Math.max(scrollTop / docHeight, 0), 1) : 0;
-            
-            // Speed reduces by ~33% at bottom (Factor goes from 1.0 to 0.66)
-            currentStarSpeed = BASE_STAR_SPEED * (1 - (scrollPercent * 0.34));
-        }
-
-        window.addEventListener('scroll', handleScroll);
-
-        // 3D Star Class (Travel Effect)
-        class Star {
-            constructor() {
-                this.reset(true);
-            }
-
-            reset(initial = false) {
-                // Random position centered on screen
-                this.x = Math.random() * width - width / 2;
-                this.y = Math.random() * height - height / 2;
-                // Depth: if initial, random depth 0 to width. If reset, start far away (width)
-                this.z = initial ? Math.random() * width : width;
-                
-                // Realistic Subtle Star Colors
-                const tints = [
-                    '255, 255, 255', // Pure White
-                    '220, 240, 255', // Light Blue (O-type/B-type)
-                    '255, 240, 220', // Pale Yellow (G-type like Sun)
-                    '255, 220, 220', // Soft Red (M-type)
-                    '255, 230, 200'  // Light Orange (K-type)
-                ];
-                // 80% chance for white, 20% for tint
-                this.color = Math.random() > 0.8 ? tints[Math.floor(Math.random() * tints.length)] : '255, 255, 255';
-            }
-
-            update() {
-                this.z = this.z - currentStarSpeed;
-                
-                if (this.z < 1) {
-                    this.reset(false);
-                }
-            }
-
-            draw() {
-                // Perspective projection: x = x / z
-                const sx = (this.x / this.z) * width + width / 2;
-                const sy = (this.y / this.z) * height + height / 2;
-
-                // Radius grows as star gets closer
-                const r = (1 - this.z / width) * 2.5;
-
-                // Opacity fades in as it gets closer
-                const alpha = (1 - this.z / width);
-
-                ctx.fillStyle = `rgba(${this.color}, ${alpha})`;
-                ctx.beginPath();
-                ctx.arc(sx, sy, Math.max(0, r), 0, Math.PI * 2);
-                ctx.fill();
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
             }
         }
-
-        // Shooting Star Class
-        class ShootingStar {
-            constructor() {
-                this.reset();
-            }
-
-            reset() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.len = Math.random() * 80 + 10;
-                this.speed = Math.random() * 10 + 10;
-                this.size = Math.random() * 1 + 0.1;
-                
-                // Random Direction (Any angle)
-                const angle = Math.random() * Math.PI * 2;
-                this.vx = Math.cos(angle) * this.speed;
-                this.vy = Math.sin(angle) * this.speed;
-
-                this.active = false;
-                // Make them rarer: Wait between 5 to 15 seconds
-                this.waitTime = new Date().getTime() + Math.random() * 10000 + 5000;
-            }
-
-            update() {
-                if (this.active) {
-                    this.x += this.vx;
-                    this.y += this.vy;
-                    
-                    // Reset if off screen (with some buffer)
-                    if (this.x < -100 || this.x > width + 100 || this.y < -100 || this.y > height + 100) {
-                        this.active = false;
-                        this.waitTime = new Date().getTime() + Math.random() * 10000 + 5000;
-                    }
-                } else {
-                    if (new Date().getTime() > this.waitTime) {
-                        this.active = true;
-                        // Respawn somewhere random
-                        this.x = Math.random() * width;
-                        this.y = Math.random() * height;
-                        // Recalculate random direction on respawn
-                        const angle = Math.random() * Math.PI * 2;
-                        this.vx = Math.cos(angle) * this.speed;
-                        this.vy = Math.sin(angle) * this.speed;
-                    }
-                }
-            }
-
-            draw() {
-                if (!this.active) return;
-                
-                // Calculate tail end position based on velocity vector
-                const tailX = this.x - (this.vx / this.speed) * this.len;
-                const tailY = this.y - (this.vy / this.speed) * this.len;
-
-                // Create gradient tail fading to transparent
-                const gradient = ctx.createLinearGradient(this.x, this.y, tailX, tailY);
-                gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-                gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-                ctx.strokeStyle = gradient;
-                ctx.lineWidth = this.size;
-                ctx.lineCap = "round";
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(tailX, tailY);
-                ctx.stroke();
-            }
-        }
-
-        // Initialize Objects
-        function init() {
-            stars = [];
-            shootingStars = [];
-            for (let i = 0; i < STAR_COUNT; i++) {
-                stars.push(new Star());
-            }
-            // Add a few shooting stars instances
-            for (let i = 0; i < 2; i++) {
-                shootingStars.push(new ShootingStar());
-            }
-        }
-
-        // Animation Loop
-        function animate() {
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
-
-            stars.forEach(star => {
-                star.update();
-                star.draw();
-            });
-
-            shootingStars.forEach(sStar => {
-                sStar.update();
-                sStar.draw();
-            });
-
-            requestAnimationFrame(animate);
-        }
-
-        // Setup Event Listeners
-        window.addEventListener('resize', () => {
-            resize();
-            init();
-        });
-        
-        resize();
-        init();
-        animate();
-
-        // --- Card Mouse Tracking (Bento Glow) ---
-        const cards = document.querySelectorAll('.bento-card');
-        
-        cards.forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--x', `${x}px`);
-                card.style.setProperty('--y', `${y}px`);
-            });
-        });
-
-        // --- Reveal on Scroll ---
-        function reveal() {
-            var reveals = document.querySelectorAll(".reveal");
-            for (var i = 0; i < reveals.length; i++) {
-                var windowHeight = window.innerHeight;
-                var elementTop = reveals[i].getBoundingClientRect().top;
-                var elementVisible = 100;
-                if (elementTop < windowHeight - elementVisible) {
-                    reveals[i].classList.add("active");
-                }
-            }
-        }
-
-        window.addEventListener("scroll", reveal);
-        window.addEventListener("load", reveal); // Initial check
     </script>
+
+    <script>
+        const video = document.querySelector("#blackhole-video");
+        const videoProfiles = {
+            orbit: {
+                small: "assets/media/blackholes-720p.mp4",
+                medium: "assets/media/blackholes-1080p.mp4",
+                large: "assets/media/blackholes-2160p.mp4"
+            },
+            nonOrbit: {
+                small: "assets/media/blackholes-non-orbit-2160p.mp4",
+                medium: "assets/media/blackholes-non-orbit-2160p.mp4",
+                large: "assets/media/blackholes-non-orbit-2160p.mp4"
+            }
+        };
+
+        function chooseVideoSource() {
+            const useNonOrbit = localStorage.getItem("pouya-ai-blackhole-nonorbit") === "true";
+            const profiles = useNonOrbit ? videoProfiles.nonOrbit : videoProfiles.orbit;
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const saveData = Boolean(connection && connection.saveData);
+            const viewportScore = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
+            const deviceMemory = navigator.deviceMemory || 8;
+            if (saveData || deviceMemory <= 3 || viewportScore < 1100) return profiles.small;
+            if (deviceMemory <= 5 || viewportScore < 2300) return profiles.medium;
+            return profiles.large;
+        }
+
+        function loadAdaptiveVideo() {
+            if (!video) return;
+            const nextSource = chooseVideoSource();
+            if (video.dataset.source === nextSource) return;
+            const currentTime = video.currentTime || 0;
+            video.dataset.source = nextSource;
+            video.src = nextSource;
+            video.addEventListener("loadedmetadata", () => {
+                if (Number.isFinite(currentTime) && currentTime > 0) {
+                    video.currentTime = currentTime % Math.max(video.duration || 1, 1);
+                }
+                video.play().catch(() => {});
+            }, { once: true });
+            video.load();
+        }
+
+        function makeLiquidMap(size, mode = "squircle") {
+            const canvas = document.createElement("canvas");
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext("2d");
+            const image = ctx.createImageData(size, size);
+            const cx = (size - 1) / 2;
+            const cy = (size - 1) / 2;
+
+            for (let y = 0; y < size; y += 1) {
+                for (let x = 0; x < size; x += 1) {
+                    const nx = (x - cx) / cx;
+                    const ny = (y - cy) / cy;
+                    const angle = Math.atan2(ny, nx);
+                    const radius = Math.sqrt(nx * nx + ny * ny);
+                    const edge = Math.max(0, 1 - radius);
+                    let magnitude;
+                    let bend;
+                    if (mode === "lens") {
+                        const softRing = radius < 1 ? Math.pow(Math.sin(radius * Math.PI), 0.9) : 0;
+                        magnitude = softRing * 0.5;
+                        bend = -magnitude;
+                    } else {
+                        const bezel = Math.pow(edge, 0.78);
+                        const ripple = Math.sin((nx * 5.7 + ny * 3.1) * Math.PI) * 0.035;
+                        magnitude = Math.min(1, (1 - Math.pow(edge, 1.55)) * bezel + ripple);
+                        bend = magnitude;
+                    }
+                    const dx = Math.cos(angle) * bend;
+                    const dy = Math.sin(angle) * bend;
+                    const index = (y * size + x) * 4;
+                    image.data[index] = 128 + dx * 127;
+                    image.data[index + 1] = 128 + dy * 127;
+                    image.data[index + 2] = 128;
+                    image.data[index + 3] = 255;
+                }
+            }
+            ctx.putImageData(image, 0, 0);
+            return canvas.toDataURL("image/png");
+        }
+
+        function installLiquidGlassMaps() {
+            document.querySelector("#liquid-panel-map")?.setAttribute("href", makeLiquidMap(192, "squircle"));
+            document.querySelector("#liquid-lens-map")?.setAttribute("href", makeLiquidMap(192, "lens"));
+        }
+
+        const lensMotion = {
+            x: window.innerWidth * 0.5,
+            y: window.innerHeight * 0.5,
+            lastX: window.innerWidth * 0.5,
+            lastY: window.innerHeight * 0.5,
+            speed: 0,
+            visible: false
+        };
+
+        function updateLensShape(clientX, clientY) {
+            const dx = clientX - lensMotion.lastX;
+            const dy = clientY - lensMotion.lastY;
+            lensMotion.speed = lensMotion.speed * 0.72 + Math.min(1, Math.hypot(dx, dy) / 42) * 0.28;
+            const angle = Math.atan2(dy, dx || 0.001);
+            const wobble = performance.now() * 0.0028;
+            const blobA = 48 + Math.sin(wobble + lensMotion.speed * 2.1) * 7 + lensMotion.speed * 10;
+            const blobB = 52 + Math.cos(wobble * 1.2) * 8 - lensMotion.speed * 5;
+            const blobC = 54 + Math.sin(wobble * 0.9 + 1.8) * 7;
+            const blobD = 46 + Math.cos(wobble * 1.4 + 0.7) * 8;
+            document.documentElement.style.setProperty("--lens-radius", `${blobA}% ${blobB}% ${blobC}% ${blobD}% / ${blobD}% ${blobC}% ${blobB}% ${blobA}%`);
+            document.documentElement.style.setProperty("--lens-rotation", `${angle}rad`);
+            document.documentElement.style.setProperty("--lens-scale-x", (1 + lensMotion.speed * 0.22).toFixed(3));
+            document.documentElement.style.setProperty("--lens-scale-y", (1 - lensMotion.speed * 0.09).toFixed(3));
+            lensMotion.lastX = clientX;
+            lensMotion.lastY = clientY;
+        }
+
+        function updateBlackholeLens(event) {
+            const interactive = event.target.closest?.("a, button, input, textarea, select, label, #scene-hud");
+            const inHero = window.scrollY < window.innerHeight * 0.82 && event.clientY > 74 && !interactive;
+            document.documentElement.style.setProperty("--lens-x", `${event.clientX}px`);
+            document.documentElement.style.setProperty("--lens-y", `${event.clientY}px`);
+            document.documentElement.style.setProperty("--lens-opacity", inHero ? "1" : "0");
+            if (inHero) updateLensShape(event.clientX, event.clientY);
+        }
+
+        installLiquidGlassMaps();
+        loadAdaptiveVideo();
+        window.addEventListener("pouya:blackhole-video-change", loadAdaptiveVideo);
+        window.addEventListener("resize", loadAdaptiveVideo);
+        window.addEventListener("pointermove", updateBlackholeLens, { passive: true });
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > window.innerHeight * 0.82) {
+                document.documentElement.style.setProperty("--lens-opacity", "0");
+            }
+        }, { passive: true });
+    </script>
+
+    <script type="module" src="assets/js/portfolio-scene.js?v=20260523g"></script>
 </body>
 </html>
