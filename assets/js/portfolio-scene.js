@@ -20,6 +20,7 @@
         const snapBtn = document.querySelector("#snap-btn");
         const undoBtn = document.querySelector("#undo-btn");
         const redoBtn = document.querySelector("#redo-btn");
+        const resetObjectBtn = document.querySelector("#reset-object-btn");
         const deleteBtn = document.querySelector("#delete-btn");
         const addLightBtn = document.querySelector("#add-light-btn");
         const refreshObjectsBtn = document.querySelector("#refresh-objects-btn");
@@ -30,6 +31,7 @@
         const exportSceneBtn = document.querySelector("#export-scene-btn");
         const saveSettingsBtn = document.querySelector("#save-settings-btn");
         const settingLoadInput = document.querySelector("#setting-load-file");
+        const resetAllSettingsBtn = document.querySelector("#reset-all-settings-btn");
         const cameraKeyframeBtn = document.querySelector("#camera-keyframe-btn");
         const cameraPlayBtn = document.querySelector("#camera-play-btn");
         const cameraPauseBtn = document.querySelector("#camera-pause-btn");
@@ -87,8 +89,6 @@
         }
 
         function chooseAnimationProfile() {
-            const quality = effectiveQualityPreset();
-            if (quality === "cinematic") return window.innerWidth > 1400 && (navigator.deviceMemory || 4) >= 8 ? "1080p" : "720p";
             return "480p";
         }
 
@@ -139,12 +139,6 @@
             [...wanted].forEach((index) => {
                 const video = animationVideos[index];
                 const source = animationVideoSource(video);
-                const link = document.createElement("link");
-                link.rel = "preload";
-                link.as = "video";
-                link.href = source;
-                link.dataset.animationPreload = "true";
-                document.head.appendChild(link);
                 const preloader = document.createElement("video");
                 preloader.muted = true;
                 preloader.playsInline = true;
@@ -158,9 +152,9 @@
 
         const projectKeys = ["geo", "iran", "history", "timeline", "animations"];
         const projectSettings = {
-            geo: { color: "#61f5ff", opacity: 0.58, spin: 0.0045, frameSpin: -0.0061, bob: true },
+            geo: { color: "#17224f", opacity: 0.58, spin: 0.0045, frameSpin: -0.0061, bob: true },
             iran: { color: "#9f0718", opacity: 0.68, spin: 0.0024, bob: true },
-            history: { color: "#d8a94d", opacity: 0.2, spin: 0.0028, bob: true },
+            history: { color: "#db831f", opacity: 0.2, spin: 0.0028, bob: true },
             timeline: { color: "#d8b263", opacity: 0.86, spin: 0.0018, bob: true },
             animations: { color: "#61f5ff", opacity: 0.72, spin: 0, bob: true }
         };
@@ -207,7 +201,7 @@
             projectTextRotateY: 13,
             blackholeNonOrbit: true,
             selectedProject: "geo",
-            hologramColor: "#61f5ff",
+            hologramColor: "#17224f",
             hologramOpacity: 0.58,
             hologramSpin: 0.004,
             hologramBob: true,
@@ -216,13 +210,13 @@
             particleSpread: 1,
             particleSize: 0.02,
             particleShapeAttraction: 0.85,
-            screenOpacity: 0.42,
-            screenBrightness: 1.3,
-            screenSaturation: 1.63,
-            screenRgbEffect: 0.72,
-            screenScanline: 0.48,
-            ambientParticleAmount: 220,
-            ambientParticleSize: 0.018,
+            screenOpacity: 0.93,
+            screenBrightness: 1.45,
+            screenSaturation: 1.81,
+            screenRgbEffect: 1,
+            screenScanline: 1,
+            ambientParticleAmount: 1000,
+            ambientParticleSize: 0.015,
             carpetIntensity: 1,
             carpetAmplitude: 0.22,
             carpetWavelength: 2.55,
@@ -256,6 +250,8 @@
             hourglassSandSpeed: 1,
             hourglassColumns: true
         };
+        const defaultVisualSettings = { ...visualSettings };
+        const defaultProjectSettings = Object.fromEntries(Object.entries(projectSettings).map(([key, value]) => [key, { ...value }]));
 
         const initialProjectText = Object.fromEntries(projectCards.map((card) => {
             const key = card.dataset.projectCard;
@@ -441,6 +437,10 @@
         let screenHover = 0;
         let hourglassFlipTarget = 0;
         let hourglassFlipProgress = 0;
+        let devModeEnabled = false;
+        let devUnlockBuffer = "";
+        let pageEditorActive = false;
+        const mobileDevCorners = [];
 
         const ambientLight = new THREE.HemisphereLight(0x527cff, 0x090018, 0.28);
         scene.add(ambientLight);
@@ -911,6 +911,7 @@
         const textureLoader = new THREE.TextureLoader();
 
         const spoutOrigin = new THREE.Vector3(2.04, -0.68, 0.42);
+        const lampSpoutLocal = new THREE.Vector3(-0.51, 0.4, -0.06);
         const geoCenter = new THREE.Vector3(2.12, 0.88, 0.02);
         const iranCenter = new THREE.Vector3(2.14, 0.82, 0.02);
         const historyCenter = new THREE.Vector3(2.1, 0.52, 0.02);
@@ -966,9 +967,9 @@
 
         const basePalettes = {
             hero: [0x14265c, 0x7541c5, 0xf5d896],
-            geo: [0x061631, 0x1bcfd4, 0xf3fbff],
+            geo: [0x071024, 0x17224f, 0x7f9cff],
             iran: [0x2a0208, 0x9f0718, 0xff5a62],
-            history: [0x3b2405, 0xd8a94d, 0xffe2a1],
+            history: [0x3b2405, 0xdb831f, 0xffd595],
             timeline: [0x2e2355, 0xc1a15e, 0xeef8ff],
             animations: sampledAnimationPalette
         };
@@ -1149,8 +1150,6 @@
             const nextSource = animationVideoSource(animationVideos[index]);
             if (cachedSource === nextSource) return cachedSource;
             video.pause();
-            video.removeAttribute("src");
-            video.load();
             video.src = nextSource;
             video.load();
             return nextSource;
@@ -1159,6 +1158,13 @@
         function ensureProjectionVideoSource(index = currentAnimationIndex) {
             projectionVideoSource = setProjectionSource(projectionVideo, index, projectionVideoSource);
         }
+
+        projectionVideoSource = animationVideoSource(animationVideos[0]);
+        projectionVideo.src = projectionVideoSource;
+        projectionVideo.load();
+        transitionVideoSource = projectionVideoSource;
+        transitionVideo.src = projectionVideoSource;
+        transitionVideo.load();
 
         const projectionVideoTexture = new THREE.VideoTexture(projectionVideo);
         const transitionVideoTexture = new THREE.VideoTexture(transitionVideo);
@@ -1340,6 +1346,7 @@
             if (!selectableObjects.includes(object)) selectableObjects.push(object);
             object.userData.selectableRoot = object;
             object.userData.editable = true;
+            if (!object.userData.defaultTransform) object.userData.defaultTransform = snapshotObject(object);
             renderObjectList();
         }
 
@@ -1356,9 +1363,10 @@
             group.name = "Flying Persian Carpet";
             const width = 5.7;
             const length = 3.75;
-            const segX = 48;
-            const segZ = 32;
-            const stringPoints = 7;
+            const lowDetailCarpet = effectiveQualityPreset() === "low";
+            const segX = lowDetailCarpet ? 32 : 48;
+            const segZ = lowDetailCarpet ? 20 : 32;
+            const stringPoints = lowDetailCarpet ? 5 : 7;
             const geometry = new THREE.BufferGeometry();
             const count = (segX + 1) * (segZ + 1);
             const positions = new Float32Array(count * 3);
@@ -1445,11 +1453,11 @@
             const material = new THREE.MeshPhysicalMaterial({
                 map: texture,
                 color: 0xffffff,
-                roughness: 0.2,
+                roughness: lowDetailCarpet ? 0.36 : 0.2,
                 metalness: 0.02,
-                clearcoat: 0.41,
+                clearcoat: lowDetailCarpet ? 0.08 : 0.41,
                 clearcoatRoughness: 0.12,
-                sheen: 0.5,
+                sheen: lowDetailCarpet ? 0.12 : 0.5,
                 sheenColor: new THREE.Color(0xffd5a0),
                 sheenRoughness: 0.22,
                 envMapIntensity: 0.72,
@@ -1513,7 +1521,8 @@ ${shader.fragmentShader}`
                 const aIndex = Math.floor(f);
                 return { a: edge[aIndex], b: edge[Math.min(edge.length - 1, aIndex + 1)], alpha: f - aIndex };
             };
-            const perEnd = Math.round(120 + data.length * visualSettings.carpetFringeDensity * 45);
+            const lowDetailCarpet = effectiveQualityPreset() === "low";
+            const perEnd = Math.round((lowDetailCarpet ? 60 : 120) + data.length * visualSettings.carpetFringeDensity * (lowDetailCarpet ? 24 : 45));
             for (const [edge, sign] of [[data.leftEdge, -1], [data.rightEdge, 1]]) {
                 for (let s = 0; s < perEnd; s += 1) {
                     const info = sampleEdge(edge, perEnd === 1 ? 0 : s / (perEnd - 1));
@@ -1879,20 +1888,21 @@ ${shader.fragmentShader}`
                     color: tint,
                     transparent: true,
                     opacity: visualSettings.hourglassGlassOpacity,
-                    transmission: 0.32,
-                    roughness: 0.1,
+                    transmission: 0.08,
+                    roughness: 0.18,
                     metalness: 0,
-                    thickness: 1.18,
+                    thickness: 0.42,
                     ior: 1.5,
-                    clearcoat: 1,
-                    clearcoatRoughness: 0.02,
-                    reflectivity: 0.28,
+                    clearcoat: 0.55,
+                    clearcoatRoughness: 0.08,
+                    reflectivity: 0.16,
                     attenuationColor: tint.clone().lerp(new THREE.Color(0xffffff), 0.25),
                     attenuationDistance: 7.5,
                     emissive: new THREE.Color(0x20343b),
                     emissiveIntensity: 0.008,
                     side: THREE.DoubleSide,
-                    depthWrite: false
+                    depthWrite: false,
+                    envMapIntensity: 0.34
                 }), visualSettings.hourglassGlassOpacity);
             };
             const makeMetalMaterial = (variant = 0) => registerFadeMaterial(new THREE.MeshPhysicalMaterial({
@@ -2194,19 +2204,30 @@ ${shader.fragmentShader}`
             createShapeParticleCloud(hourglass, "timeline", 460);
         }
 
+        function updateSpoutFromLamp(lamp) {
+            spoutOrigin.copy(lampSpoutLocal).applyQuaternion(lamp.quaternion).add(lamp.position);
+            return spoutOrigin;
+        }
+
         function updateLampFloatAndSpout(elapsed) {
             const lamp = assetObjects.get("lamp");
             if (!lamp) return;
             if (sceneMode && grabbedProjection !== lamp) {
                 lampProjectionOffsetTarget.copy(lamp.position).sub(lampDefaultPosition);
                 lampProjectionOffset.copy(lampProjectionOffsetTarget);
-                spoutOrigin.copy(lamp.position).add(new THREE.Vector3(-0.51, 0.4, -0.06));
+                updateSpoutFromLamp(lamp);
                 return;
             }
             if (grabbedProjection !== lamp) {
                 const velocity = lamp.userData.dragVelocity;
                 if (velocity) {
                     lamp.position.add(velocity);
+                    const targetTiltZ = clamp(-velocity.x * 3.2, -0.44, 0.44);
+                    const targetTiltX = clamp(velocity.y * 2.4, -0.32, 0.32);
+                    const targetYaw = clamp(velocity.z * 2.2, -0.24, 0.24);
+                    lamp.rotation.z += (targetTiltZ - lamp.rotation.z) * 0.12;
+                    lamp.rotation.x += (targetTiltX - lamp.rotation.x) * 0.1;
+                    lamp.rotation.y += (targetYaw - lamp.rotation.y) * 0.08;
                     velocity.multiplyScalar(0.88);
                     if (velocity.length() < 0.002) lamp.userData.dragVelocity = null;
                 }
@@ -2214,11 +2235,13 @@ ${shader.fragmentShader}`
                 const target = lampDefaultPosition.clone();
                 target.y += floatY;
                 lamp.position.lerp(target, 0.038);
+                lamp.rotation.x += (0 - lamp.rotation.x) * 0.055;
+                lamp.rotation.y += (0 - lamp.rotation.y) * 0.055;
                 lamp.rotation.z += (Math.sin(elapsed * 0.52) * 0.012 - lamp.rotation.z) * 0.06;
             }
             lampProjectionOffsetTarget.copy(lamp.position).sub(lampDefaultPosition);
             lampProjectionOffset.lerp(lampProjectionOffsetTarget, 0.08);
-            spoutOrigin.copy(lamp.position).add(new THREE.Vector3(-0.51, 0.4, -0.06));
+            updateSpoutFromLamp(lamp);
         }
 
         function unregisterEditable(object) {
@@ -2249,12 +2272,21 @@ ${shader.fragmentShader}`
             object.rotation.set(snapshot.rotation[0], snapshot.rotation[1], snapshot.rotation[2]);
             object.scale.fromArray(snapshot.scale);
             object.visible = snapshot.visible;
+            object.updateMatrixWorld(true);
+            if (object.userData.assetId === "lamp") updateSpoutFromLamp(object);
             updateInspector();
+            updateProjectionState();
         }
 
         function pushTransformAction(object, before, after, label = "Transform") {
             if (!object || JSON.stringify(before) === JSON.stringify(after)) return;
-            actionStack.push({ type: "transform", object, before, after, label });
+            const cloneSnapshot = (snapshot) => ({
+                ...snapshot,
+                position: [...snapshot.position],
+                rotation: [...snapshot.rotation],
+                scale: [...snapshot.scale]
+            });
+            actionStack.push({ type: "transform", object, before: cloneSnapshot(before), after: cloneSnapshot(after), label });
             redoStack.length = 0;
         }
 
@@ -2338,6 +2370,23 @@ ${shader.fragmentShader}`
             return null;
         }
 
+        function bestSelectableHit(hits, { interactive = false } = {}) {
+            const candidates = hits
+                .map((hit) => ({ hit, root: findSelectableRoot(hit.object) || hit.object }))
+                .filter(({ root }) => root && root.visible !== false && !root.userData.editorHidden && !root.userData.editorLocked);
+            if (!candidates.length) return null;
+            candidates.sort((a, b) => {
+                const priorityDelta = (b.root.userData.selectionPriority || 0) - (a.root.userData.selectionPriority || 0);
+                if (priorityDelta) return priorityDelta;
+                if (interactive) {
+                    const alphaDelta = (alphaForProject(projectKeys.indexOf(b.root.userData.projectKey)) || 0) - (alphaForProject(projectKeys.indexOf(a.root.userData.projectKey)) || 0);
+                    if (alphaDelta) return alphaDelta;
+                }
+                return a.hit.distance - b.hit.distance;
+            });
+            return candidates[0].root;
+        }
+
         function pointerRayFromEvent(event) {
             const rect = renderer.domElement.getBoundingClientRect();
             pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -2392,7 +2441,34 @@ ${shader.fragmentShader}`
             return false;
         }
 
+        function maybeUnlockDevFromMobileCorners(event) {
+            if (devModeEnabled || !window.matchMedia("(pointer: coarse)").matches) return false;
+            const margin = Math.min(96, Math.max(44, window.innerWidth * 0.16));
+            const x = event.clientX;
+            const y = event.clientY;
+            const corner =
+                x < margin && y > window.innerHeight - margin ? "bl" :
+                x > window.innerWidth - margin && y > window.innerHeight - margin ? "br" :
+                x > window.innerWidth - margin && y < margin ? "tr" :
+                x < margin && y < margin ? "tl" : "";
+            if (!corner) return false;
+            const expected = ["bl", "br", "tr", "tl"][mobileDevCorners.length];
+            if (corner === expected) mobileDevCorners.push(corner);
+            else {
+                mobileDevCorners.length = 0;
+                if (corner === "bl") mobileDevCorners.push(corner);
+            }
+            if (mobileDevCorners.length === 4) {
+                mobileDevCorners.length = 0;
+                setDevMode(true);
+                event.preventDefault();
+                return true;
+            }
+            return false;
+        }
+
         function onPointerDown(event) {
+            if (maybeUnlockDevFromMobileCorners(event)) return;
             if (!sceneMode && currentEnvironmentOpacity > 0.2 && !event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock")) {
                 const carpetHit = pickFlyingCarpet(event);
                 if (carpetHit && startFlyingCarpetDrag(event, carpetHit)) return;
@@ -2426,7 +2502,7 @@ ${shader.fragmentShader}`
             raycaster.setFromCamera(pointer, camera);
             const hits = raycaster.intersectObjects(selectableObjects, true);
             if (hits.length > 0) {
-                const rootObject = hits.map((hit) => findSelectableRoot(hit.object)).find((object) => object && !object.userData.editorLocked && !object.userData.editorHidden && object.visible !== false);
+                const rootObject = bestSelectableHit(hits);
                 if (rootObject) attachToObject(rootObject);
             }
         }
@@ -2436,7 +2512,7 @@ ${shader.fragmentShader}`
             const roots = [...interactiveProjectionRoots].filter((object) => object.visible && !object.userData.editorHidden && !object.userData.editorLocked);
             const hits = raycaster.intersectObjects(roots, true);
             if (!hits.length) return null;
-            return findSelectableRoot(hits[0].object) || hits[0].object;
+            return bestSelectableHit(hits, { interactive: true });
         }
 
         function onProjectionDoubleClick(event) {
@@ -2488,6 +2564,7 @@ ${shader.fragmentShader}`
                 const before = snapshotObject(object);
                 if (transform === "rotation") object.rotation[axis] = THREE.MathUtils.degToRad(value);
                 else object[transform][axis] = value;
+                if (object.userData.assetId === "lamp") updateSpoutFromLamp(object);
                 const after = snapshotObject(object);
                 pushTransformAction(object, before, after, "Inspector edit");
             });
@@ -2524,8 +2601,11 @@ ${shader.fragmentShader}`
                 lock.title = "Lock object. Shift-click locks all others.";
                 lock.addEventListener("click", (event) => {
                     event.stopPropagation();
-                    if (event.shiftKey) editableObjects.forEach((candidate) => { candidate.userData.editorLocked = candidate !== object; });
-                    else object.userData.editorLocked = !object.userData.editorLocked;
+                    if (event.shiftKey) {
+                        const isolated = editableObjects.every((candidate) => candidate === object || candidate.userData.editorLocked);
+                        editableObjects.forEach((candidate) => { candidate.userData.editorLocked = isolated ? false : candidate !== object; });
+                        object.userData.editorLocked = false;
+                    } else object.userData.editorLocked = !object.userData.editorLocked;
                     if (object.userData.editorLocked && selectedObject === object) detachSelection();
                     renderObjectList();
                 });
@@ -2537,9 +2617,10 @@ ${shader.fragmentShader}`
                 hide.addEventListener("click", (event) => {
                     event.stopPropagation();
                     if (event.shiftKey) {
+                        const isolated = editableObjects.every((candidate) => candidate === object || candidate.userData.editorHidden || candidate.visible === false);
                         editableObjects.forEach((candidate) => {
-                            candidate.userData.editorHidden = candidate !== object;
-                            candidate.visible = candidate === object;
+                            candidate.userData.editorHidden = isolated ? false : candidate !== object;
+                            candidate.visible = isolated ? true : candidate === object;
                         });
                     } else {
                         object.userData.editorHidden = !object.userData.editorHidden;
@@ -2570,6 +2651,21 @@ ${shader.fragmentShader}`
             actionStack.push({ type: "delete", object, parent, label: `Delete ${object.name || "object"}` });
             redoStack.length = 0;
             setStatus(`Deleted ${object.name || "object"}.`);
+        }
+
+        function resetSelectedObject() {
+            const targets = multiSelectedObjects.size ? [...multiSelectedObjects] : selectedObject ? [selectedObject] : [];
+            if (!targets.length) return;
+            targets.forEach((object) => {
+                const snapshot = object.userData.defaultTransform;
+                if (!snapshot || object.userData.editorLocked) return;
+                const before = snapshotObject(object);
+                applySnapshot(object, snapshot);
+                pushTransformAction(object, before, snapshotObject(object), `Reset ${object.name || "object"}`);
+            });
+            updateInspector();
+            renderObjectList();
+            setStatus(`Reset ${targets.length} object${targets.length === 1 ? "" : "s"} to defaults.`);
         }
 
         function addEditorLight() {
@@ -2800,6 +2896,16 @@ ${shader.fragmentShader}`
                 lamp.userData.dragMove = true;
                 lamp.userData.defaultPosition = lampDefaultPosition.clone();
                 lamp.userData.grabAxis = "move-return";
+                lamp.userData.selectionPriority = 40;
+                const lampSelectionProxy = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.8, 1.05, 1.1),
+                    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+                );
+                lampSelectionProxy.name = "Lamp enlarged selection volume";
+                lampSelectionProxy.position.set(0, 0.18, 0);
+                lampSelectionProxy.userData.selectableRoot = lamp;
+                lampSelectionProxy.renderOrder = -10;
+                lamp.add(lampSelectionProxy);
                 projectionStage.add(lamp);
                 registerEditable(lamp);
                 interactiveProjectionRoots.add(lamp);
@@ -2826,7 +2932,6 @@ ${shader.fragmentShader}`
                 icosahedron.traverse((child) => {
                     if (child.isMesh) {
                         child.material = makeProjectHologramMaterial("geo", 0.06);
-                        child.material.color.set(0xa78bfa);
                         child.material.userData.projectKey = "geo";
                         child.material.userData.baseOpacity = 0.06;
                         child.material.userData.opacityMultiplier = 0.06;
@@ -2961,6 +3066,25 @@ ${shader.fragmentShader}`
             if (active) syncProjectSettingInputs(activeProjectKey());
         }
 
+        function setDevMode(active) {
+            devModeEnabled = active;
+            document.body.classList.toggle("dev-mode-enabled", active);
+            if (!active) {
+                setSceneMode(false);
+                setSettingsOpen(false);
+                setPageEditorMode(false);
+            } else {
+                setStatus("Dev controls unlocked.");
+            }
+        }
+
+        function setPageEditorMode(active) {
+            if (active && !devModeEnabled) return;
+            pageEditorActive = active;
+            document.body.classList.toggle("page-editor-active", active);
+            setStatus(active ? "Page editor preview on. Drag-resize outlines are visible." : "Page editor preview off.");
+        }
+
         function setScenePageVisible(active) {
             scenePageVisible = active;
             document.body.classList.toggle("scene-page-visible", sceneMode && scenePageVisible);
@@ -3001,16 +3125,16 @@ ${shader.fragmentShader}`
 
         function alphaForProject(index) {
             const delta = Math.abs(projectionFloat - index);
-            if (delta <= 0.24) return 1;
-            if (delta >= 0.42) return 0;
-            return smootherstep(clamp(1 - (delta - 0.24) / 0.18));
+            if (delta <= 0.34) return 1;
+            if (delta >= 0.5) return 0;
+            return smootherstep(clamp(1 - (delta - 0.34) / 0.16));
         }
 
         function particleAlphaForProject(index) {
             const delta = Math.abs(projectionFloat - index);
-            if (delta <= 0.26) return 1;
-            if (delta >= 0.48) return 0;
-            return smootherstep(clamp(1 - (delta - 0.26) / 0.22));
+            if (delta <= 0.32) return 1;
+            if (delta >= 0.54) return 0;
+            return smootherstep(clamp(1 - (delta - 0.32) / 0.22));
         }
 
         function projectVectorAt(floatIndex) {
@@ -3112,9 +3236,10 @@ ${shader.fragmentShader}`
                 document.documentElement.style.setProperty(`--about-panel-${index}-opacity`, eased.toFixed(3));
                 document.documentElement.style.setProperty(`--about-panel-${index}-y`, `${((1 - eased) * 42).toFixed(1)}px`);
             });
-            if (aboutVideo?.duration && Number.isFinite(aboutVideo.duration)) {
-                const targetTime = progress * Math.max(aboutVideo.duration - 0.08, 0);
-                if (Math.abs((aboutVideo.currentTime || 0) - targetTime) > 0.06) aboutVideo.currentTime = targetTime;
+            if (aboutVideo) {
+                aboutVideo.playbackRate = 0.35 + smootherstep(progress) * 2.15;
+                if (fade > 0.08) aboutVideo.play().catch(() => {});
+                else aboutVideo.pause();
             }
         }
 
@@ -3349,16 +3474,60 @@ ${shader.fragmentShader}`
             if (projectDescriptionEditor) projectDescriptionEditor.value = projectText[projectTextTarget?.value || visualSettings.selectedProject] || "";
         }
 
+        function installSettingResetButtons() {
+            document.querySelectorAll(".hud-details").forEach((details) => {
+                const summary = details.querySelector(":scope > summary");
+                if (!summary || summary.querySelector(".settings-reset-mini")) return;
+                const reset = document.createElement("button");
+                reset.type = "button";
+                reset.className = "settings-reset-mini";
+                reset.title = "Reset this section to defaults";
+                reset.innerHTML = `<i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>`;
+                reset.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    resetSettingSection(details);
+                });
+                summary.appendChild(reset);
+            });
+        }
+
+        function resetSettingSection(details) {
+            const keys = [...details.querySelectorAll(".live-setting")].map((input) => input.dataset.setting).filter(Boolean);
+            keys.forEach((key) => {
+                if (key in defaultVisualSettings) visualSettings[key] = defaultVisualSettings[key];
+            });
+            if (keys.some((key) => ["hologramColor", "hologramOpacity", "hologramSpin", "hologramBob"].includes(key))) {
+                const projectKey = visualSettings.selectedProject || "geo";
+                Object.assign(projectSettings[projectKey], defaultProjectSettings[projectKey]);
+                syncProjectSettingInputs(projectKey);
+            }
+            if (keys.includes("blackholeNonOrbit")) localStorage.setItem("pouya-ai-blackhole-video-choice", visualSettings.blackholeNonOrbit ? "nonOrbit" : "orbit");
+            syncAllSettingInputs();
+            applyVisualSettings();
+            setStatus("Settings section reset to defaults.");
+        }
+
+        function resetAllSettings() {
+            Object.assign(visualSettings, defaultVisualSettings);
+            Object.entries(defaultProjectSettings).forEach(([key, value]) => Object.assign(projectSettings[key], value));
+            localStorage.setItem("pouya-ai-blackhole-video-choice", visualSettings.blackholeNonOrbit ? "nonOrbit" : "orbit");
+            syncProjectSettingInputs("geo");
+            syncAllSettingInputs();
+            applyVisualSettings();
+            setStatus("All settings reset to defaults.");
+        }
+
         let appliedQualityPreset = "";
         function applyQualityPreset() {
             const quality = effectiveQualityPreset();
-            const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.42) : quality === "medium" ? Math.floor(flowCount * 0.72) : flowCount;
+            const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.32) : quality === "medium" ? Math.floor(flowCount * 0.72) : flowCount;
             flowGeometry.setDrawRange(0, flowDrawCount);
             assetObjects.forEach((object) => {
                 const cloud = object.userData?.shapeCloud;
                 if (!cloud) return;
                 const count = cloud.geometry.attributes.position.count;
-                const factor = quality === "low" ? 0.42 : quality === "medium" ? 0.72 : 1;
+                const factor = quality === "low" ? 0.34 : quality === "medium" ? 0.72 : 1;
                 cloud.geometry.setDrawRange(0, Math.max(80, Math.floor(count * factor)));
             });
             if (bloomPass) {
@@ -3373,8 +3542,17 @@ ${shader.fragmentShader}`
             renderer.setPixelRatio(preferredPixelRatio());
             composer?.setPixelRatio(preferredPixelRatio());
             if (appliedQualityPreset !== quality) {
-                projectionVideoSource = "";
-                transitionVideoSource = "";
+                const source = animationVideoSource(animationVideos[currentAnimationIndex] || animationVideos[0]);
+                projectionVideoSource = source;
+                transitionVideoSource = source;
+                if (projectionVideo.src !== source) {
+                    projectionVideo.src = source;
+                    projectionVideo.load();
+                }
+                if (transitionVideo.src !== source) {
+                    transitionVideo.src = source;
+                    transitionVideo.load();
+                }
                 preloadAnimationVideos(currentAnimationIndex);
                 appliedQualityPreset = quality;
             }
@@ -3414,7 +3592,6 @@ ${shader.fragmentShader}`
             rootStyle.setProperty("--glass-highlight-alpha", visualSettings.glassHighlightAlpha);
             rootStyle.setProperty("--glass-glare-alpha", visualSettings.glassGlareAlpha);
             document.body.classList.toggle("chromatic-glass", Boolean(visualSettings.chromaticGlass));
-            localStorage.setItem("pouya-ai-blackhole-nonorbit", String(Boolean(visualSettings.blackholeNonOrbit)));
             window.dispatchEvent(new CustomEvent("pouya:blackhole-video-change"));
             rootStyle.setProperty("--lens-user-opacity", visualSettings.lensOpacity);
             rootStyle.setProperty("--lens-size", `${visualSettings.lensSize}px`);
@@ -3760,6 +3937,7 @@ ${shader.fragmentShader}`
             const projectKey = activeProjectKey();
             updateFlowTargets(projectKey);
             flowMaterial.uniforms.uGuideTarget.value.copy(projectVectorAt(projectionFloat));
+            flowMaterial.uniforms.uSpout.value.copy(spoutOrigin);
             flowMaterial.uniforms.uTime.value = elapsed;
             flowMaterial.uniforms.uSpeed.value = visualSettings.particleSpeed;
             flowMaterial.uniforms.uSpread.value = visualSettings.particleSpread * (1 + hoverPulse * 0.32);
@@ -3776,7 +3954,9 @@ ${shader.fragmentShader}`
         }
 
         function updateAmbientParticles(elapsed) {
-            const drawCount = Math.min(ambientParticleCount, Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
+            const quality = effectiveQualityPreset();
+            const qualityCap = quality === "low" ? 320 : quality === "medium" ? 700 : ambientParticleCount;
+            const drawCount = Math.min(ambientParticleCount, qualityCap, Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
             ambientParticleGeometry.setDrawRange(0, drawCount);
             ambientParticles.visible = drawCount > 0 && currentEnvironmentOpacity > 0.06;
             ambientParticleMaterial.size = visualSettings.ambientParticleSize;
@@ -4054,6 +4234,7 @@ ${shader.fragmentShader}`
                 camera.position.copy(cameraRig.position);
                 camera.lookAt(orbitControls.target);
             }
+            if (selectedObject?.userData.assetId === "lamp") updateSpoutFromLamp(selectedObject);
             updateInspector();
         });
 
@@ -4070,11 +4251,18 @@ ${shader.fragmentShader}`
         });
         undoBtn.addEventListener("click", runUndo);
         redoBtn.addEventListener("click", runRedo);
+        resetObjectBtn?.addEventListener("click", resetSelectedObject);
         deleteBtn.addEventListener("click", deleteSelectedObject);
         addLightBtn.addEventListener("click", addEditorLight);
         refreshObjectsBtn.addEventListener("click", renderObjectList);
-        sceneToggle.addEventListener("click", () => setSceneMode(!sceneMode));
-        settingsToggle?.addEventListener("click", () => setSettingsOpen(!settingsOpen));
+        sceneToggle.addEventListener("click", () => {
+            if (!devModeEnabled) return;
+            setSceneMode(!sceneMode);
+        });
+        settingsToggle?.addEventListener("click", () => {
+            if (!devModeEnabled) return;
+            setSettingsOpen(!settingsOpen);
+        });
         sceneCloseBtn.addEventListener("click", () => {
             if (settingsOpen && !sceneMode) setSettingsOpen(false);
             else setSceneMode(false);
@@ -4097,6 +4285,7 @@ ${shader.fragmentShader}`
                 if (key === "hologramColor") setProjectColor(visualSettings.selectedProject, input.value);
                 if (key === "hologramOpacity") setProjectOpacity(visualSettings.selectedProject, Number(input.value));
                 if (key === "hologramSpin") getProjectSetting(visualSettings.selectedProject).spin = Number(input.value);
+                if (key === "blackholeNonOrbit") localStorage.setItem("pouya-ai-blackhole-video-choice", input.checked ? "nonOrbit" : "orbit");
                 if (input.dataset.rebuildCarpet === "true") rebuildFlyingCarpetFringes();
                 if (key.startsWith("hourglass") && !["hourglassGlassOpacity", "hourglassTint", "hourglassStreamThickness", "hourglassStreamOverlap", "hourglassTimerSeconds", "hourglassColumns"].includes(key)) rebuildImportedHourglass();
                 applyVisualSettings();
@@ -4135,6 +4324,7 @@ ${shader.fragmentShader}`
             readJsonFile(event.target.files[0], applySettingsData);
             event.target.value = "";
         });
+        resetAllSettingsBtn?.addEventListener("click", resetAllSettings);
         sceneLoadInput.addEventListener("change", (event) => {
             readJsonFile(event.target.files[0], applySceneData);
             event.target.value = "";
@@ -4246,6 +4436,11 @@ ${shader.fragmentShader}`
                         const before = grabbedProjection.position.clone();
                         grabbedProjection.position.lerp(local, 0.75);
                         grabbedProjection.userData.dragVelocity = grabbedProjection.position.clone().sub(before).multiplyScalar(0.9);
+                        const velocity = grabbedProjection.userData.dragVelocity;
+                        grabbedProjection.rotation.z += (clamp(-velocity.x * 3.6, -0.5, 0.5) - grabbedProjection.rotation.z) * 0.18;
+                        grabbedProjection.rotation.x += (clamp(velocity.y * 2.5, -0.34, 0.34) - grabbedProjection.rotation.x) * 0.16;
+                        grabbedProjection.rotation.y += (clamp(velocity.z * 2.1, -0.28, 0.28) - grabbedProjection.rotation.y) * 0.12;
+                        updateSpoutFromLamp(grabbedProjection);
                     }
                 } else if (axis === "screen") {
                     grabbedProjection.rotation.y = grabStartRotations.y + dx * 0.006;
@@ -4291,6 +4486,11 @@ ${shader.fragmentShader}`
             const editingField = event.target?.matches?.("input, textarea, select");
             const passiveControl = event.target?.matches?.("input[type='range'], input[type='checkbox'], input[type='color'], select");
             if (editingField && !passiveControl && !event.ctrlKey && !event.metaKey) return;
+            if (!editingField && key.length === 1 && /^[a-z]$/.test(key)) {
+                devUnlockBuffer = (devUnlockBuffer + key).slice(-5);
+                if (devUnlockBuffer === "pouya") setDevMode(!devModeEnabled);
+            }
+            if (!devModeEnabled) return;
             if (key === "h") {
                 event.preventDefault();
                 setSceneMode(!sceneMode);
@@ -4298,6 +4498,10 @@ ${shader.fragmentShader}`
             if (key === "o") {
                 event.preventDefault();
                 setSettingsOpen(!settingsOpen);
+            }
+            if (key === "p") {
+                event.preventDefault();
+                setPageEditorMode(!pageEditorActive);
             }
             if (key === "v" && sceneMode) {
                 setScenePageVisible(true);
@@ -4359,6 +4563,7 @@ ${shader.fragmentShader}`
                         object.scale.z = Math.max(0.02, object.scale.z + delta);
                     }
                 }
+                if (object.userData.assetId === "lamp") updateSpoutFromLamp(object);
                 pushTransformAction(object, before, snapshotObject(object), "Wheel 3rd axis");
             });
             updateInspector();
@@ -4506,6 +4711,7 @@ ${shader.fragmentShader}`
         aboutVideo?.load();
         applyVisualSettings();
         syncAllSettingInputs();
+        installSettingResetButtons();
         preloadAnimationVideos();
         renderObjectList();
         renderCameraKeyframes();

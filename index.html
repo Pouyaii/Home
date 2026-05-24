@@ -71,6 +71,7 @@
                 <button id="snap-btn" class="hud-button" type="button"><i class="ph ph-magnet" aria-hidden="true"></i>Snap</button>
                 <button id="undo-btn" class="hud-button" type="button"><i class="ph ph-arrow-u-up-left" aria-hidden="true"></i>Undo</button>
                 <button id="redo-btn" class="hud-button" type="button"><i class="ph ph-arrow-u-up-right" aria-hidden="true"></i>Redo</button>
+                <button id="reset-object-btn" class="hud-button" type="button"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Reset</button>
                 <button id="delete-btn" class="hud-button danger" type="button"><i class="ph ph-trash" aria-hidden="true"></i>Delete</button>
                 <button id="add-light-btn" class="hud-button" type="button"><i class="ph ph-lightbulb" aria-hidden="true"></i>Light</button>
                 <label for="model-file" class="hud-file"><i class="ph ph-upload-simple" aria-hidden="true"></i>GLB</label>
@@ -80,7 +81,7 @@
             <p class="mt-2 text-[11px] leading-5 text-white/42">Hotkeys: H editor, hold V to show and scroll the page while tools stay open, W/E/R tools, Delete remove, Ctrl+Z/Y undo/redo, Shift while scaling for uniform scale, Esc exit.</p>
         </div>
 
-        <details class="hud-section hud-collapse" open>
+        <details class="hud-section hud-collapse">
             <summary>Objects <i class="ph ph-stack" aria-hidden="true"></i></summary>
             <div class="mb-2 flex items-center justify-between">
                 <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Objects</div>
@@ -89,7 +90,7 @@
             <div id="object-list" class="object-list"></div>
         </details>
 
-        <details class="hud-section hud-collapse" open>
+        <details class="hud-section hud-collapse">
             <summary>Transform <i class="ph ph-arrows-out-cardinal" aria-hidden="true"></i></summary>
             <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Transform</div>
             <div class="inspector-grid">
@@ -160,9 +161,12 @@
         </details>
 
         <div class="hud-section">
-            <div class="mb-2 text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Visual Settings</div>
+            <div class="mb-2 flex items-center justify-between gap-2">
+                <div class="text-[11px] uppercase tracking-[0.12em] text-white/54 font-extrabold">Visual Settings</div>
+                <button id="reset-all-settings-btn" class="hud-button !min-h-7 !px-2" type="button"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Reset all</button>
+            </div>
 
-            <details class="hud-details" open>
+            <details class="hud-details">
                 <summary>Liquid glass panels <i class="ph ph-sliders-horizontal" aria-hidden="true"></i></summary>
                 <div class="settings-grid">
                     <label for="setting-glass-blur">Blur</label>
@@ -348,8 +352,8 @@
                     </select>
                     <span class="setting-value" data-value-for="selectedProject">geo</span>
                     <label for="setting-holo-color">Holo color</label>
-                    <input id="setting-holo-color" class="hud-color live-setting" data-setting="hologramColor" type="color" value="#61f5ff">
-                    <span class="setting-value" data-value-for="hologramColor">#61f5ff</span>
+                    <input id="setting-holo-color" class="hud-color live-setting" data-setting="hologramColor" type="color" value="#17224f">
+                    <span class="setting-value" data-value-for="hologramColor">#17224f</span>
                     <label for="setting-holo-opacity">Opacity</label>
                     <input id="setting-holo-opacity" class="hud-range live-setting" data-setting="hologramOpacity" type="range" min="0.08" max="1" step="0.01" value="0.58">
                     <span class="setting-value" data-value-for="hologramOpacity">0.58</span>
@@ -375,26 +379,42 @@
                     <input id="setting-particle-shape" class="hud-range live-setting" data-setting="particleShapeAttraction" type="range" min="0" max="1.4" step="0.05" value="0.85">
                     <span class="setting-value" data-value-for="particleShapeAttraction">0.85</span>
                     <label for="setting-screen-opacity">Screen alpha</label>
-                    <input id="setting-screen-opacity" class="hud-range live-setting" data-setting="screenOpacity" type="range" min="0.25" max="1" step="0.01" value="0.42">
-                    <span class="setting-value" data-value-for="screenOpacity">0.42</span>
+                    <input id="setting-screen-opacity" class="hud-range live-setting" data-setting="screenOpacity" type="range" min="0.25" max="1" step="0.01" value="0.93">
+                    <span class="setting-value" data-value-for="screenOpacity">0.93</span>
                     <label for="setting-screen-brightness">Screen bright</label>
-                    <input id="setting-screen-brightness" class="hud-range live-setting" data-setting="screenBrightness" type="range" min="0.5" max="2" step="0.01" value="1.3">
-                    <span class="setting-value" data-value-for="screenBrightness">1.30</span>
+                    <input id="setting-screen-brightness" class="hud-range live-setting" data-setting="screenBrightness" type="range" min="0.5" max="2" step="0.01" value="1.45">
+                    <span class="setting-value" data-value-for="screenBrightness">1.45</span>
                     <label for="setting-screen-saturation">Screen color</label>
-                    <input id="setting-screen-saturation" class="hud-range live-setting" data-setting="screenSaturation" type="range" min="0" max="2" step="0.01" value="1.63">
-                    <span class="setting-value" data-value-for="screenSaturation">1.63</span>
+                    <input id="setting-screen-saturation" class="hud-range live-setting" data-setting="screenSaturation" type="range" min="0" max="2" step="0.01" value="1.81">
+                    <span class="setting-value" data-value-for="screenSaturation">1.81</span>
                     <label for="setting-screen-rgb">RGB TV</label>
-                    <input id="setting-screen-rgb" class="hud-range live-setting" data-setting="screenRgbEffect" type="range" min="0" max="1" step="0.01" value="0.72">
-                    <span class="setting-value" data-value-for="screenRgbEffect">0.72</span>
+                    <input id="setting-screen-rgb" class="hud-range live-setting" data-setting="screenRgbEffect" type="range" min="0" max="1" step="0.01" value="1">
+                    <span class="setting-value" data-value-for="screenRgbEffect">1</span>
                     <label for="setting-screen-scanline">Scanlines</label>
-                    <input id="setting-screen-scanline" class="hud-range live-setting" data-setting="screenScanline" type="range" min="0" max="1" step="0.01" value="0.48">
-                    <span class="setting-value" data-value-for="screenScanline">0.48</span>
+                    <input id="setting-screen-scanline" class="hud-range live-setting" data-setting="screenScanline" type="range" min="0" max="1" step="0.01" value="1">
+                    <span class="setting-value" data-value-for="screenScanline">1</span>
                     <label for="setting-ambient-particles">Ambient dust</label>
-                    <input id="setting-ambient-particles" class="hud-range live-setting" data-setting="ambientParticleAmount" type="range" min="0" max="1000" step="25" value="220">
-                    <span class="setting-value" data-value-for="ambientParticleAmount">220</span>
+                    <input id="setting-ambient-particles" class="hud-range live-setting" data-setting="ambientParticleAmount" type="range" min="0" max="1000" step="25" value="1000">
+                    <span class="setting-value" data-value-for="ambientParticleAmount">1000</span>
                     <label for="setting-ambient-particle-size">Dust size</label>
-                    <input id="setting-ambient-particle-size" class="hud-range live-setting" data-setting="ambientParticleSize" type="range" min="0.004" max="0.08" step="0.001" value="0.018">
-                    <span class="setting-value" data-value-for="ambientParticleSize">0.018</span>
+                    <input id="setting-ambient-particle-size" class="hud-range live-setting" data-setting="ambientParticleSize" type="range" min="0.004" max="0.08" step="0.001" value="0.015">
+                    <span class="setting-value" data-value-for="ambientParticleSize">0.015</span>
+                </div>
+            </details>
+            <details class="hud-details">
+                <summary>Keybind helper <i class="ph ph-keyboard" aria-hidden="true"></i></summary>
+                <div class="keybind-list">
+                    <span>type pouya</span><b>Unlock dev controls</b>
+                    <span>H / O</span><b>Scene editor / settings</b>
+                    <span>P</span><b>Page layout editor preview</b>
+                    <span>K</span><b>Overlay page UI while editing scene</b>
+                    <span>V hold</span><b>Scroll page with scene tools visible</b>
+                    <span>W E R</span><b>Move, rotate, scale tools</b>
+                    <span>Shift scale</span><b>Uniform scale</b>
+                    <span>Shift lock/hide</span><b>Solo isolate toggle</b>
+                    <span>Ctrl click</span><b>Multi-select objects</b>
+                    <span>Ctrl Z / Y</span><b>Undo / redo</b>
+                    <span>Drag + wheel</span><b>Move the third transform axis</b>
                 </div>
             </details>
             <details class="hud-details">
@@ -512,7 +532,7 @@
                             </p>
                             <div class="project-actions">
                                 <a href="https://pouyaii.github.io/Timelines/" target="_blank" class="liquid-action liquid-glass">Preview Timeline <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
-                                <button id="hourglass-flip-btn" class="liquid-action liquid-glass icon-action" type="button" aria-label="Flip hourglass"><i class="ph ph-hourglass-high" aria-hidden="true"></i><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></button>
+                                <button id="hourglass-flip-btn" class="liquid-action liquid-glass icon-action" type="button" aria-label="Flip hourglass"><i class="ph ph-arrows-clockwise flip-left" aria-hidden="true"></i><i class="ph ph-hourglass-high" aria-hidden="true"></i><i class="ph ph-arrows-clockwise flip-right" aria-hidden="true"></i></button>
                             </div>
                         </article>
 
@@ -530,9 +550,9 @@
         </section>
 
         <section id="about" class="content-band about-scroll-band">
-            <video id="about-blackhole-video" class="about-background-video" muted playsinline preload="auto" poster="assets/media/blackholes-poster.jpg">
-                <source src="assets/media/blackholes-scrub-1080p.mp4" media="(min-width: 900px)" type="video/mp4">
-                <source src="assets/media/blackholes-scrub-720p.mp4" type="video/mp4">
+            <video id="about-blackhole-video" class="about-background-video" muted playsinline loop preload="auto" poster="assets/media/blackholes-poster.jpg">
+                <source src="assets/media/blackholes-1080p.mp4" media="(min-width: 900px)" type="video/mp4">
+                <source src="assets/media/blackholes-720p.mp4" type="video/mp4">
             </video>
             <div class="about-scroll-copy mx-auto max-w-7xl">
                 <article class="about-panel liquid-glass" data-about-panel="0">
@@ -611,7 +631,8 @@
         };
 
         function chooseVideoSource() {
-            const useNonOrbit = localStorage.getItem("pouya-ai-blackhole-nonorbit") !== "false";
+            const videoChoice = localStorage.getItem("pouya-ai-blackhole-video-choice");
+            const useNonOrbit = videoChoice !== "orbit";
             const profiles = useNonOrbit ? videoProfiles.nonOrbit : videoProfiles.orbit;
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const saveData = Boolean(connection && connection.saveData);
@@ -733,6 +754,6 @@
         }, { passive: true });
     </script>
 
-    <script type="module" src="assets/js/portfolio-scene.js?v=20260523i"></script>
+    <script type="module" src="assets/js/portfolio-scene.js?v=20260523j"></script>
 </body>
 </html>
