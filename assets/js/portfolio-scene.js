@@ -54,6 +54,35 @@
         const timelineExpandBtn = document.querySelector("#timeline-expand-btn");
         const timelineAddKeyframeBtn = document.querySelector("#timeline-add-keyframe-btn");
         const timelineTrack = document.querySelector("#timeline-track");
+        const pageEditorPanel = document.querySelector("#page-editor-panel");
+        const pageEditorCloseBtn = document.querySelector("#page-editor-close-btn");
+        const pageElementSelect = document.querySelector("#page-element-select");
+        const pageElementTimeline = document.querySelector("#page-element-timeline");
+        const pageElementTimelineValue = document.querySelector("#page-element-timeline-value");
+        const pageElementX = document.querySelector("#page-element-x");
+        const pageElementY = document.querySelector("#page-element-y");
+        const pageElementWidth = document.querySelector("#page-element-width");
+        const pageElementHeight = document.querySelector("#page-element-height");
+        const pageElementOpacity = document.querySelector("#page-element-opacity");
+        const pageElementOpacityValue = document.querySelector("#page-element-opacity-value");
+        const pageElementFont = document.querySelector("#page-element-font");
+        const pageElementColor = document.querySelector("#page-element-color");
+        const pageElementText = document.querySelector("#page-element-text");
+        const pageAddTextBtn = document.querySelector("#page-add-text-btn");
+        const pageResetElementBtn = document.querySelector("#page-reset-element-btn");
+        const pageSaveConfigBtn = document.querySelector("#page-save-config-btn");
+        const pageLoadConfigBtn = document.querySelector("#page-load-config-btn");
+        const pageExportConfigBtn = document.querySelector("#page-export-config-btn");
+        const pageImportConfigFile = document.querySelector("#page-import-config-file");
+        const pageTimelineDock = document.querySelector("#page-timeline-dock");
+        const pageTimelineTrack = document.querySelector("#page-timeline-track");
+        const pageTimelineAddBtn = document.querySelector("#page-timeline-add-btn");
+        const perfOverlay = document.querySelector("#perf-overlay");
+        const perfFps = document.querySelector("#perf-fps");
+        const perfFrame = document.querySelector("#perf-frame");
+        const perfQuality = document.querySelector("#perf-quality");
+        const perfParticles = document.querySelector("#perf-particles");
+        const perfRug = document.querySelector("#perf-rug");
         const projectViewer = document.querySelector("#project-viewer");
         const projectCards = [...document.querySelectorAll("[data-project-card]")];
         const projectTextTarget = document.querySelector("#project-text-target");
@@ -82,7 +111,7 @@
             const pixels = window.innerWidth * window.innerHeight;
             const highPixelViewport = pixels > 1920 * 1080;
             const quality = effectiveQualityPreset();
-            const qualityCap = quality === "low" ? 1.1 : quality === "cinematic" ? 2 : 1.45;
+            const qualityCap = quality === "low" ? 1.0 : quality === "medium" ? 1.35 : quality === "high" ? 1.65 : 2;
             const deviceCap = memory >= 8 && !highPixelViewport ? 2 : memory <= 4 || highPixelViewport ? 1.5 : 1.75;
             const cap = Math.min(qualityCap, deviceCap);
             return Math.max(1, Math.min(dpr, cap));
@@ -128,8 +157,9 @@
             const reducedNetwork = Boolean(connection?.saveData) || ["slow-2g", "2g", "3g"].includes(connection?.effectiveType);
             const coarse = window.matchMedia("(pointer: coarse)").matches;
             if (reducedNetwork || memory <= 4 || coarse || window.innerWidth < 760) return "low";
+            if (memory >= 12 && window.innerWidth >= 1500) return "high";
             if (memory >= 8 && window.innerWidth >= 1280) return "medium";
-            return "low";
+            return "medium";
         }
 
         function preloadAnimationVideos(centerIndex = currentAnimationIndex || 0) {
@@ -237,6 +267,8 @@
             carpetFringeGravity: 0.42,
             carpetSelfCollision: true,
             carpetCollisionThickness: 0.2,
+            carpetRugStretch: 0.18,
+            carpetFringeStretch: 0.1,
             hourglassTimerSeconds: 60,
             hourglassGlassOpacity: 0.55,
             hourglassTint: 1,
@@ -421,6 +453,7 @@
         let grabStartY = 0;
         let grabStartRotation = 0;
         let grabStartRotations = { x: 0, y: 0, z: 0 };
+        const grabStartQuaternion = new THREE.Quaternion();
         let grabLastX = 0;
         let grabLastY = 0;
         let grabLastTime = 0;
@@ -440,6 +473,15 @@
         let devModeEnabled = false;
         let devUnlockBuffer = "";
         let pageEditorActive = false;
+        let pageElementCounter = 0;
+        let selectedPageElementId = "";
+        let pageEditorDrag = null;
+        let perfOverlayActive = false;
+        let perfLastStamp = performance.now();
+        let perfFrames = 0;
+        let perfFpsValue = 0;
+        const pageElements = new Map();
+        const pageEditorFrames = new Map();
         const mobileDevCorners = [];
 
         const ambientLight = new THREE.HemisphereLight(0x527cff, 0x090018, 0.28);
@@ -1109,9 +1151,9 @@
         const ambientParticleColors = new Float32Array(ambientParticleCount * 3);
         const ambientParticleSeeds = [];
         for (let i = 0; i < ambientParticleCount; i += 1) {
-            ambientParticlePositions[i * 3] = (Math.random() - 0.5) * 10;
-            ambientParticlePositions[i * 3 + 1] = -0.4 + Math.random() * 4.2;
-            ambientParticlePositions[i * 3 + 2] = (Math.random() - 0.5) * 5.5;
+            ambientParticlePositions[i * 3] = (Math.random() - 0.5) * 22;
+            ambientParticlePositions[i * 3 + 1] = -1.25 + Math.random() * 7.4;
+            ambientParticlePositions[i * 3 + 2] = (Math.random() - 0.5) * 14;
             ambientParticleSeeds.push({ x: ambientParticlePositions[i * 3], y: ambientParticlePositions[i * 3 + 1], z: ambientParticlePositions[i * 3 + 2], phase: Math.random() * Math.PI * 2 });
         }
         ambientParticleGeometry.setAttribute("position", new THREE.BufferAttribute(ambientParticlePositions, 3));
@@ -1358,15 +1400,87 @@
             if (options.interactive) interactiveProjectionRoots.add(object);
         }
 
+        function carpetQualityProfile() {
+            const mobile = window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 760;
+            const quality = effectiveQualityPreset();
+            const profiles = {
+                low: {
+                    label: "Battery",
+                    segX: 18,
+                    segZ: 12,
+                    stringPoints: 4,
+                    solverIterations: 2,
+                    normalsEvery: 5,
+                    fringeEvery: 3,
+                    fringeBase: 28,
+                    fringeMul: 7,
+                    fringes: false,
+                    shadows: false,
+                    fakeShadow: true,
+                    selfCollision: false,
+                    material: 0.16
+                },
+                medium: {
+                    label: "Balanced",
+                    segX: mobile ? 22 : 28,
+                    segZ: mobile ? 15 : 18,
+                    stringPoints: mobile ? 4 : 5,
+                    solverIterations: mobile ? 2 : 3,
+                    normalsEvery: mobile ? 4 : 3,
+                    fringeEvery: mobile ? 2 : 1,
+                    fringeBase: mobile ? 36 : 58,
+                    fringeMul: mobile ? 9 : 13,
+                    fringes: true,
+                    shadows: !mobile,
+                    fakeShadow: mobile,
+                    selfCollision: false,
+                    material: 0.48
+                },
+                high: {
+                    label: "Beautiful",
+                    segX: mobile ? 26 : 34,
+                    segZ: mobile ? 18 : 22,
+                    stringPoints: mobile ? 5 : 6,
+                    solverIterations: mobile ? 3 : 4,
+                    normalsEvery: mobile ? 3 : 2,
+                    fringeEvery: 1,
+                    fringeBase: mobile ? 46 : 86,
+                    fringeMul: mobile ? 11 : 18,
+                    fringes: true,
+                    shadows: !mobile,
+                    fakeShadow: mobile,
+                    selfCollision: !mobile,
+                    material: 0.78
+                },
+                cinematic: {
+                    label: "Ultra",
+                    segX: mobile ? 30 : 38,
+                    segZ: mobile ? 20 : 24,
+                    stringPoints: mobile ? 5 : 7,
+                    solverIterations: mobile ? 3 : 4,
+                    normalsEvery: 2,
+                    fringeEvery: 1,
+                    fringeBase: mobile ? 54 : 105,
+                    fringeMul: mobile ? 13 : 23,
+                    fringes: true,
+                    shadows: !mobile,
+                    fakeShadow: mobile,
+                    selfCollision: !mobile,
+                    material: 1
+                }
+            };
+            return profiles[quality] || profiles.medium;
+        }
+
         function makeFlyingCarpet() {
             const group = new THREE.Group();
             group.name = "Flying Persian Carpet";
             const width = 5.7;
             const length = 3.75;
-            const lowDetailCarpet = effectiveQualityPreset() === "low";
-            const segX = lowDetailCarpet ? 32 : 48;
-            const segZ = lowDetailCarpet ? 20 : 32;
-            const stringPoints = lowDetailCarpet ? 5 : 7;
+            const carpetQuality = carpetQualityProfile();
+            const segX = carpetQuality.segX;
+            const segZ = carpetQuality.segZ;
+            const stringPoints = carpetQuality.stringPoints;
             const geometry = new THREE.BufferGeometry();
             const count = (segX + 1) * (segZ + 1);
             const positions = new Float32Array(count * 3);
@@ -1453,11 +1567,11 @@
             const material = new THREE.MeshPhysicalMaterial({
                 map: texture,
                 color: 0xffffff,
-                roughness: lowDetailCarpet ? 0.36 : 0.2,
+                roughness: lerp(0.42, 0.2, carpetQuality.material),
                 metalness: 0.02,
-                clearcoat: lowDetailCarpet ? 0.08 : 0.41,
+                clearcoat: lerp(0.06, 0.41, carpetQuality.material),
                 clearcoatRoughness: 0.12,
-                sheen: lowDetailCarpet ? 0.12 : 0.5,
+                sheen: lerp(0.12, 0.5, carpetQuality.material),
                 sheenColor: new THREE.Color(0xffd5a0),
                 sheenRoughness: 0.22,
                 envMapIntensity: 0.72,
@@ -1484,8 +1598,8 @@ ${shader.fragmentShader}`
                         if (abs(uHueShift) > 0.001) diffuseColor.rgb = hueShiftRug(diffuseColor.rgb, uHueShift);`);
             };
             const mesh = new THREE.Mesh(geometry, material);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+            mesh.castShadow = carpetQuality.shadows;
+            mesh.receiveShadow = carpetQuality.shadows;
             mesh.frustumCulled = false;
             mesh.userData.selectableRoot = group;
             group.add(mesh);
@@ -1504,6 +1618,7 @@ ${shader.fragmentShader}`
                 mesh, material, geometry, positions, rest, curr, prev, constraints, edgeLine,
                 fringeGeometry, fringeMaterial, fringes, fringePositions: null, fringeMeta: [],
                 width, length, segX, segZ, stringPoints, topEdge, bottomEdge, leftEdge, rightEdge,
+                carpetQuality,
                 group, lampLocal: null,
                 hoverPoint: new THREE.Vector2(), hoverTargetPoint: new THREE.Vector2(), hoverActive: 0, hoverTarget: 0, hoverPulse: 0, frame: 0
             };
@@ -1516,13 +1631,21 @@ ${shader.fragmentShader}`
             const data = rug?.userData?.carpet;
             if (!data) return;
             const meta = [];
+            const carpetQuality = data.carpetQuality || carpetQualityProfile();
             const sampleEdge = (edge, t) => {
                 const f = clamp(t) * (edge.length - 1);
                 const aIndex = Math.floor(f);
                 return { a: edge[aIndex], b: edge[Math.min(edge.length - 1, aIndex + 1)], alpha: f - aIndex };
             };
-            const lowDetailCarpet = effectiveQualityPreset() === "low";
-            const perEnd = Math.round((lowDetailCarpet ? 60 : 120) + data.length * visualSettings.carpetFringeDensity * (lowDetailCarpet ? 24 : 45));
+            if (!carpetQuality.fringes) {
+                data.fringeMeta = [];
+                data.fringePositions = new Float32Array(0);
+                data.fringeGeometry.setAttribute("position", new THREE.BufferAttribute(data.fringePositions, 3));
+                data.fringes.visible = false;
+                return;
+            }
+            data.fringes.visible = true;
+            const perEnd = Math.round(carpetQuality.fringeBase + data.length * visualSettings.carpetFringeDensity * carpetQuality.fringeMul);
             for (const [edge, sign] of [[data.leftEdge, -1], [data.rightEdge, 1]]) {
                 for (let s = 0; s < perEnd; s += 1) {
                     const info = sampleEdge(edge, perEnd === 1 ? 0 : s / (perEnd - 1));
@@ -1620,6 +1743,7 @@ ${shader.fragmentShader}`
                 data.lampLocal = null;
             }
             const n = data.curr.length / 3;
+            const carpetQuality = data.carpetQuality || carpetQualityProfile();
             const damp = 0.985;
             const spring = 32;
             const gravity = -0.25;
@@ -1646,7 +1770,7 @@ ${shader.fragmentShader}`
                 data.curr[o + 1] = y + vy + ((ty - y) * spring + gravity) * dt * dt;
                 data.curr[o + 2] = z + vz + (tz - z) * spring * dt * dt;
             }
-            for (let iter = 0; iter < 4; iter += 1) {
+            for (let iter = 0; iter < carpetQuality.solverIterations; iter += 1) {
                 data.constraints.forEach((c) => {
                     const a = carpetOffset(c.a);
                     const b = carpetOffset(c.b);
@@ -1669,7 +1793,7 @@ ${shader.fragmentShader}`
                     }
                 });
             }
-            if (draggedCarpet === data && visualSettings.carpetSelfCollision && data.frame % 2 === 0) applyFlyingCarpetSelfCollision(data);
+            if (carpetQuality.selfCollision && draggedCarpet === data && visualSettings.carpetSelfCollision && data.frame % 2 === 0) applyFlyingCarpetSelfCollision(data);
         }
 
         function applyFlyingCarpetSelfCollision(data) {
@@ -1722,8 +1846,11 @@ ${shader.fragmentShader}`
         function updateFlyingCarpetGeometry(data) {
             data.positions.set(data.curr);
             data.geometry.attributes.position.needsUpdate = true;
-            data.geometry.computeVertexNormals();
-            data.geometry.attributes.normal.needsUpdate = true;
+            const carpetQuality = data.carpetQuality || carpetQualityProfile();
+            if (data.frame % carpetQuality.normalsEvery === 0) {
+                data.geometry.computeVertexNormals();
+                data.geometry.attributes.normal.needsUpdate = true;
+            }
             const pts = [];
             const push = (n) => {
                 const o = carpetOffset(n);
@@ -1815,7 +1942,8 @@ ${shader.fragmentShader}`
             const data = rug.userData.carpet;
             simulateFlyingCarpet(data, 1 / 60, elapsed);
             updateFlyingCarpetGeometry(data);
-            updateFlyingCarpetFringes(data, 1 / 60, elapsed);
+            const carpetQuality = data.carpetQuality || carpetQualityProfile();
+            if (carpetQuality.fringes && data.frame % carpetQuality.fringeEvery === 0) updateFlyingCarpetFringes(data, (1 / 60) * carpetQuality.fringeEvery, elapsed);
             updateFlyingCarpetMaterial(data);
         }
 
@@ -2209,6 +2337,27 @@ ${shader.fragmentShader}`
             return spoutOrigin;
         }
 
+        function angleDelta(target, current) {
+            return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+        }
+
+        function orientLampHandleToCamera(lamp, strength = 0.18) {
+            const cameraLocal = lamp.parent.worldToLocal(camera.getWorldPosition(new THREE.Vector3()).clone());
+            const dx = cameraLocal.x - lamp.position.x;
+            const dz = cameraLocal.z - lamp.position.z;
+            if (Math.hypot(dx, dz) < 0.001) return;
+            const targetYaw = Math.atan2(dx, dz) + Math.PI * 0.5;
+            lamp.rotation.y += angleDelta(targetYaw, lamp.rotation.y) * strength;
+        }
+
+        function orientLampSpoutToVelocity(lamp, velocity, strength = 0.12) {
+            const vx = velocity?.x || 0;
+            const vz = velocity?.z || 0;
+            if (Math.hypot(vx, vz) < 0.001) return;
+            const targetYaw = Math.atan2(vz, -vx);
+            lamp.rotation.y += angleDelta(targetYaw, lamp.rotation.y) * strength;
+        }
+
         function updateLampFloatAndSpout(elapsed) {
             const lamp = assetObjects.get("lamp");
             if (!lamp) return;
@@ -2224,10 +2373,9 @@ ${shader.fragmentShader}`
                     lamp.position.add(velocity);
                     const targetTiltZ = clamp(-velocity.x * 3.2, -0.44, 0.44);
                     const targetTiltX = clamp(velocity.y * 2.4, -0.32, 0.32);
-                    const targetYaw = clamp(velocity.z * 2.2, -0.24, 0.24);
                     lamp.rotation.z += (targetTiltZ - lamp.rotation.z) * 0.12;
                     lamp.rotation.x += (targetTiltX - lamp.rotation.x) * 0.1;
-                    lamp.rotation.y += (targetYaw - lamp.rotation.y) * 0.08;
+                    orientLampSpoutToVelocity(lamp, velocity, 0.16);
                     velocity.multiplyScalar(0.88);
                     if (velocity.length() < 0.002) lamp.userData.dragVelocity = null;
                 }
@@ -2469,7 +2617,7 @@ ${shader.fragmentShader}`
 
         function onPointerDown(event) {
             if (maybeUnlockDevFromMobileCorners(event)) return;
-            if (!sceneMode && currentEnvironmentOpacity > 0.2 && !event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock")) {
+            if (!sceneMode && currentEnvironmentOpacity > 0.2 && !event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock, #page-editor-panel, #page-timeline-dock, .page-editor-frame")) {
                 const carpetHit = pickFlyingCarpet(event);
                 if (carpetHit && startFlyingCarpetDrag(event, carpetHit)) return;
                 const hit = pickInteractiveProjection(event);
@@ -2481,6 +2629,7 @@ ${shader.fragmentShader}`
                     const grabAxis = hit.userData.grabAxis || "y";
                     grabStartRotation = grabAxis === "screen" || grabAxis === "dual-return" ? hit.rotation.y : hit.rotation[grabAxis];
                     grabStartRotations = { x: hit.rotation.x, y: hit.rotation.y, z: hit.rotation.z };
+                    grabStartQuaternion.copy(hit.quaternion);
                     grabLastPosition.copy(hit.position);
                     grabLastX = event.clientX;
                     grabLastY = event.clientY;
@@ -2722,6 +2871,34 @@ ${shader.fragmentShader}`
             rootObject.userData.editable = true;
         }
 
+        function addLampSelectionProxy(lamp) {
+            lamp.updateMatrixWorld(true);
+            const box = new THREE.Box3();
+            lamp.traverse((child) => {
+                if (child.isMesh && !child.userData.selectionProxy) box.expandByObject(child);
+            });
+            if (box.isEmpty()) return;
+            const worldScale = lamp.getWorldScale(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3()).multiplyScalar(1.06);
+            const localCenter = lamp.worldToLocal(center.clone());
+            const localSize = new THREE.Vector3(
+                size.x / Math.max(worldScale.x, 0.0001),
+                size.y / Math.max(worldScale.y, 0.0001),
+                size.z / Math.max(worldScale.z, 0.0001)
+            );
+            const proxy = new THREE.Mesh(
+                new THREE.BoxGeometry(localSize.x, localSize.y, localSize.z),
+                new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+            );
+            proxy.name = "Lamp visual selection volume";
+            proxy.position.copy(localCenter);
+            proxy.userData.selectableRoot = lamp;
+            proxy.userData.selectionProxy = true;
+            proxy.renderOrder = -10;
+            lamp.add(proxy);
+        }
+
         async function loadGLB(path) {
             return new Promise((resolve, reject) => {
                 gltfLoader.load(path, (gltf) => resolve(gltf.scene), undefined, reject);
@@ -2897,15 +3074,7 @@ ${shader.fragmentShader}`
                 lamp.userData.defaultPosition = lampDefaultPosition.clone();
                 lamp.userData.grabAxis = "move-return";
                 lamp.userData.selectionPriority = 40;
-                const lampSelectionProxy = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.8, 1.05, 1.1),
-                    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
-                );
-                lampSelectionProxy.name = "Lamp enlarged selection volume";
-                lampSelectionProxy.position.set(0, 0.18, 0);
-                lampSelectionProxy.userData.selectableRoot = lamp;
-                lampSelectionProxy.renderOrder = -10;
-                lamp.add(lampSelectionProxy);
+                addLampSelectionProxy(lamp);
                 projectionStage.add(lamp);
                 registerEditable(lamp);
                 interactiveProjectionRoots.add(lamp);
@@ -3046,6 +3215,10 @@ ${shader.fragmentShader}`
         }
 
         function setSceneMode(active) {
+            if (active) {
+                setPageEditorMode(false);
+                setSettingsOpen(false);
+            }
             sceneMode = active;
             document.body.classList.toggle("scene-mode-active", active);
             document.body.classList.toggle("scene-page-visible", active && scenePageVisible);
@@ -3060,6 +3233,10 @@ ${shader.fragmentShader}`
         }
 
         function setSettingsOpen(active) {
+            if (active) {
+                setPageEditorMode(false);
+                if (sceneMode) setSceneMode(false);
+            }
             settingsOpen = active;
             document.body.classList.toggle("settings-open", active);
             settingsToggle?.setAttribute("aria-pressed", String(active));
@@ -3078,11 +3255,400 @@ ${shader.fragmentShader}`
             }
         }
 
+        function pageFontFamily(preset) {
+            return {
+                playfair: "'Playfair Display', Georgia, serif",
+                cinematic: "Georgia, 'Times New Roman', serif",
+                modern: "'Plus Jakarta Sans', system-ui, sans-serif",
+                system: "system-ui, sans-serif"
+            }[preset] || "";
+        }
+
+        function pageElementLabel(element, id) {
+            if (element.dataset.projectCard) return element.querySelector(".project-title")?.textContent?.trim() || id;
+            if (id.startsWith("about-")) return `About paragraph ${Number(id.split("-")[1] || 0) + 1}`;
+            if (id === "hero-title") return "Hero title";
+            if (id === "hero-subtitle") return "Hero subtitle";
+            if (id === "footer") return "Footer";
+            return id.replace(/-/g, " ");
+        }
+
+        function maxPageScroll() {
+            return Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        }
+
+        function projectionIndexToPageTimeline(index) {
+            if (!projectViewer) return 0.15 + index * 0.12;
+            const y = window.scrollY || 0;
+            const rect = projectViewer.getBoundingClientRect();
+            const sectionTop = y + rect.top;
+            const sectionScrollable = Math.max(projectViewer.offsetHeight - window.innerHeight, 1);
+            const progress = projectKeys.length > 1 ? (index / (projectKeys.length - 1)) * 0.88 : 0;
+            return clamp((sectionTop + sectionScrollable * progress) / maxPageScroll());
+        }
+
+        function elementToPageTimeline(element, fallback = 0) {
+            if (!element) return fallback;
+            const top = window.scrollY + element.getBoundingClientRect().top;
+            return clamp((top + Math.min(element.offsetHeight || 0, window.innerHeight) * 0.35) / maxPageScroll());
+        }
+
+        function readPageElementText(element) {
+            if (!element) return "";
+            const title = element.querySelector?.(".project-title");
+            const copy = element.querySelector?.(".project-copy");
+            const link = element.querySelector?.(".project-link");
+            if (title || copy || link) {
+                const blocks = [];
+                if (title) blocks.push(title.textContent.trim());
+                if (copy) blocks.push(copy.textContent.trim());
+                if (link) blocks.push(`Button: ${link.textContent.trim()}`);
+                return blocks.join("\n\n");
+            }
+            return element.textContent.trim();
+        }
+
+        function writePageElementText(entry, text) {
+            const element = entry?.element;
+            if (!element) return;
+            const title = element.querySelector?.(".project-title");
+            const copy = element.querySelector?.(".project-copy");
+            const link = element.querySelector?.(".project-link");
+            if (title || copy || link) {
+                const blocks = text.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+                if (title && blocks[0]) title.textContent = blocks[0];
+                if (copy && blocks[1]) copy.textContent = blocks[1];
+                const buttonBlock = blocks.find((part) => /^button:/i.test(part));
+                if (link && buttonBlock) link.textContent = buttonBlock.replace(/^button:\s*/i, "");
+                return;
+            }
+            element.textContent = text;
+        }
+
+        function discoverPageElements() {
+            const existingSelection = selectedPageElementId;
+            pageElements.clear();
+            document.querySelectorAll("[data-page-element]").forEach((element) => {
+                const id = element.dataset.pageElement;
+                if (!id) return;
+                let timeline = elementToPageTimeline(element, 0.2);
+                if (element.dataset.projectCard) {
+                    const index = projectKeys.indexOf(element.dataset.projectCard);
+                    timeline = projectionIndexToPageTimeline(Math.max(0, index));
+                } else if (id === "hero-title") timeline = 0.018;
+                else if (id === "hero-subtitle") timeline = 0.056;
+                else if (id === "footer") timeline = 0.985;
+                const rect = element.getBoundingClientRect();
+                const entry = {
+                    id,
+                    label: pageElementLabel(element, id),
+                    element,
+                    timeline,
+                    x: Number(element.dataset.pageEditorX || 0),
+                    y: Number(element.dataset.pageEditorY || 0),
+                    width: Number(element.dataset.pageEditorWidth || Math.round(rect.width || 320)),
+                    height: Number(element.dataset.pageEditorHeight || Math.round(rect.height || 120)),
+                    opacity: Number(element.dataset.pageEditorOpacity || 1),
+                    font: element.dataset.pageEditorFont || "",
+                    color: element.dataset.pageEditorColor || "#ffffff",
+                    text: readPageElementText(element),
+                    custom: false
+                };
+                pageElements.set(id, entry);
+                applyPageElement(entry);
+            });
+            pageElementSelect.innerHTML = "";
+            pageElements.forEach((entry) => {
+                const option = document.createElement("option");
+                option.value = entry.id;
+                option.textContent = entry.label;
+                pageElementSelect.appendChild(option);
+            });
+            selectedPageElementId = pageElements.has(existingSelection) ? existingSelection : (pageElements.keys().next().value || "");
+            if (selectedPageElementId) pageElementSelect.value = selectedPageElementId;
+        }
+
+        function applyPageElement(entry) {
+            if (!entry?.element) return;
+            entry.element.style.setProperty("--page-editor-x", `${entry.x || 0}px`);
+            entry.element.style.setProperty("--page-editor-y", `${entry.y || 0}px`);
+            entry.element.style.setProperty("--page-editor-opacity", entry.opacity ?? 1);
+            if (entry.width) {
+                entry.element.style.width = `${entry.width}px`;
+                entry.element.style.maxWidth = "min(92vw, var(--page-editor-width, 9999px))";
+                entry.element.style.setProperty("--page-editor-width", `${entry.width}px`);
+            }
+            if (entry.height) entry.element.style.minHeight = `${entry.height}px`;
+            if (entry.color) entry.element.style.color = entry.color;
+            const family = pageFontFamily(entry.font);
+            if (family) entry.element.style.fontFamily = family;
+        }
+
+        function setSelectedPageElement(id) {
+            if (!pageElements.has(id)) return;
+            selectedPageElementId = id;
+            const entry = pageElements.get(id);
+            if (pageElementSelect) pageElementSelect.value = id;
+            if (pageElementTimeline) pageElementTimeline.value = entry.timeline.toFixed(3);
+            if (pageElementTimelineValue) pageElementTimelineValue.textContent = entry.timeline.toFixed(3);
+            if (pageElementX) pageElementX.value = Math.round(entry.x || 0);
+            if (pageElementY) pageElementY.value = Math.round(entry.y || 0);
+            if (pageElementWidth) pageElementWidth.value = Math.round(entry.width || entry.element.getBoundingClientRect().width || 0);
+            if (pageElementHeight) pageElementHeight.value = Math.round(entry.height || entry.element.getBoundingClientRect().height || 0);
+            if (pageElementOpacity) pageElementOpacity.value = entry.opacity ?? 1;
+            if (pageElementOpacityValue) pageElementOpacityValue.textContent = Number(entry.opacity ?? 1).toFixed(2);
+            if (pageElementFont) pageElementFont.value = entry.font || "";
+            if (pageElementColor) pageElementColor.value = entry.color || "#ffffff";
+            if (pageElementText) pageElementText.value = readPageElementText(entry.element);
+            renderPageEditorFrames();
+            renderPageTimeline();
+        }
+
+        function pageElementData(entry) {
+            return {
+                id: entry.id,
+                timeline: entry.timeline,
+                x: entry.x,
+                y: entry.y,
+                width: entry.width,
+                height: entry.height,
+                opacity: entry.opacity,
+                font: entry.font,
+                color: entry.color,
+                text: readPageElementText(entry.element),
+                custom: Boolean(entry.custom)
+            };
+        }
+
+        function applyPageElementConfig(config) {
+            if (!config?.elements) return;
+            config.elements.forEach((item) => {
+                let entry = pageElements.get(item.id);
+                if (!entry && item.custom) entry = createPageTextElement(item);
+                if (!entry) return;
+                Object.assign(entry, item);
+                if (item.text !== undefined) writePageElementText(entry, item.text);
+                applyPageElement(entry);
+            });
+            setSelectedPageElement(config.selected || selectedPageElementId || pageElements.keys().next().value);
+            renderPageTimeline();
+            renderPageEditorFrames();
+        }
+
+        function serializePageConfig() {
+            return {
+                version: 1,
+                selected: selectedPageElementId,
+                elements: [...pageElements.values()].map(pageElementData)
+            };
+        }
+
+        function createPageTextElement(seed = {}) {
+            const id = seed.id || `custom-text-${++pageElementCounter}`;
+            let element = document.querySelector(`[data-page-element="${CSS.escape(id)}"]`);
+            if (!element) {
+                element = document.createElement("div");
+                element.className = "projection-panel glass-plane-enabled custom-page-text";
+                element.dataset.pageElement = id;
+                element.innerHTML = `<h3 class="project-title">${seed.text || "New text element"}</h3>`;
+                document.querySelector(".projection-copy-shell")?.appendChild(element);
+            }
+            const rect = element.getBoundingClientRect();
+            const entry = {
+                id,
+                label: seed.label || "Custom text",
+                element,
+                timeline: Number(seed.timeline ?? currentProjectionProgress),
+                x: Number(seed.x ?? 0),
+                y: Number(seed.y ?? 0),
+                width: Number(seed.width ?? Math.round(rect.width || 360)),
+                height: Number(seed.height ?? Math.round(rect.height || 120)),
+                opacity: Number(seed.opacity ?? 1),
+                font: seed.font || "",
+                color: seed.color || "#ffffff",
+                custom: true
+            };
+            pageElements.set(id, entry);
+            applyPageElement(entry);
+            return entry;
+        }
+
+        function pageTimelineSections() {
+            const max = maxPageScroll();
+            const y = window.scrollY || 0;
+            const viewerTop = projectViewer ? y + projectViewer.getBoundingClientRect().top : window.innerHeight;
+            const viewerScrollable = projectViewer ? Math.max(projectViewer.offsetHeight - window.innerHeight, 1) : max * 0.55;
+            const about = document.querySelector("#about");
+            const aboutStart = about ? clamp((y + about.getBoundingClientRect().top) / max) : 0.86;
+            const sections = [{ label: "Top", start: 0, end: clamp(viewerTop / max), color: "rgba(91, 134, 255, 0.26)" }];
+            projectKeys.forEach((key, index) => {
+                const startProgress = index === 0 ? 0 : ((index - 0.5) / (projectKeys.length - 1)) * 0.88;
+                const endProgress = index === projectKeys.length - 1 ? 0.88 : ((index + 0.5) / (projectKeys.length - 1)) * 0.88;
+                sections.push({
+                    label: key,
+                    start: clamp((viewerTop + viewerScrollable * startProgress) / max),
+                    end: clamp((viewerTop + viewerScrollable * endProgress) / max),
+                    color: blendedProjectPaletteForKey(key, 0.28)
+                });
+            });
+            sections.push({ label: "About", start: aboutStart, end: 1, color: "rgba(128, 92, 255, 0.28)" });
+            return sections.filter((section) => section.end > section.start);
+        }
+
+        function blendedProjectPaletteForKey(key, alpha = 0.25) {
+            const color = new THREE.Color(projectSettings[key]?.color || "#6ee7ff");
+            return `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${alpha})`;
+        }
+
+        function renderTimelineSections(track, fullPage = false) {
+            if (!track) return;
+            track.querySelectorAll(".timeline-section").forEach((section) => section.remove());
+            const sections = fullPage ? pageTimelineSections() : [
+                { label: "GeoIntel", start: 0, end: 0.11, color: blendedProjectPaletteForKey("geo", 0.26) },
+                { label: "Iran", start: 0.11, end: 0.33, color: blendedProjectPaletteForKey("iran", 0.22) },
+                { label: "History", start: 0.33, end: 0.55, color: blendedProjectPaletteForKey("history", 0.22) },
+                { label: "Timeline", start: 0.55, end: 0.77, color: blendedProjectPaletteForKey("timeline", 0.22) },
+                { label: "Animations", start: 0.77, end: 1, color: blendedProjectPaletteForKey("animations", 0.22) }
+            ];
+            sections.forEach((section) => {
+                const el = document.createElement("div");
+                el.className = "timeline-section";
+                el.style.left = `${section.start * 100}%`;
+                el.style.width = `${Math.max(0.5, (section.end - section.start) * 100)}%`;
+                el.style.background = section.color;
+                el.title = section.label;
+                track.prepend(el);
+            });
+        }
+
+        function renderPageTimeline() {
+            if (!pageTimelineTrack) return;
+            pageTimelineTrack.querySelectorAll(".page-timeline-chip").forEach((chip) => chip.remove());
+            renderTimelineSections(pageTimelineTrack, true);
+            pageElements.forEach((entry) => {
+                const chip = document.createElement("button");
+                chip.type = "button";
+                chip.className = `page-timeline-chip ${entry.id === selectedPageElementId ? "active" : ""}`;
+                chip.style.left = `${clamp(entry.timeline) * 100}%`;
+                chip.textContent = entry.label;
+                chip.title = `${entry.label} @ ${entry.timeline.toFixed(3)}`;
+                chip.addEventListener("click", () => setSelectedPageElement(entry.id));
+                chip.addEventListener("pointerdown", (event) => {
+                    event.preventDefault();
+                    setSelectedPageElement(entry.id);
+                    chip.setPointerCapture(event.pointerId);
+                    const rect = pageTimelineTrack.getBoundingClientRect();
+                    const onMove = (moveEvent) => {
+                        entry.timeline = clamp((moveEvent.clientX - rect.left) / Math.max(rect.width, 1));
+                        chip.style.left = `${entry.timeline * 100}%`;
+                        setSelectedPageElement(entry.id);
+                    };
+                    const onUp = () => {
+                        chip.removeEventListener("pointermove", onMove);
+                        chip.removeEventListener("pointerup", onUp);
+                    };
+                    chip.addEventListener("pointermove", onMove);
+                    chip.addEventListener("pointerup", onUp);
+                });
+                pageTimelineTrack.appendChild(chip);
+            });
+        }
+
+        function makePageEditorFrame(entry) {
+            const frame = document.createElement("div");
+            frame.className = "page-editor-frame";
+            frame.dataset.pageFrame = entry.id;
+            frame.innerHTML = `<span class="page-editor-frame-label"></span><button class="page-editor-move" type="button" aria-label="Move element"><i class="ph ph-arrows-out-cardinal" aria-hidden="true"></i></button>${["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => `<span class="page-editor-handle ${handle}" data-handle="${handle}"></span>`).join("")}`;
+            frame.querySelector(".page-editor-frame-label").textContent = entry.label;
+            frame.addEventListener("pointerdown", (event) => {
+                const handle = event.target.dataset.handle;
+                if (!handle && !event.target.closest(".page-editor-move")) return;
+                event.preventDefault();
+                setSelectedPageElement(entry.id);
+                const rect = entry.element.getBoundingClientRect();
+                pageEditorDrag = {
+                    id: entry.id,
+                    handle: handle || "move",
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    x: entry.x || 0,
+                    y: entry.y || 0,
+                    width: entry.width || rect.width,
+                    height: entry.height || rect.height
+                };
+                frame.setPointerCapture(event.pointerId);
+            });
+            frame.addEventListener("pointermove", (event) => {
+                if (!pageEditorDrag || pageEditorDrag.id !== entry.id) return;
+                event.preventDefault();
+                const dx = event.clientX - pageEditorDrag.startX;
+                const dy = event.clientY - pageEditorDrag.startY;
+                const handle = pageEditorDrag.handle;
+                if (handle === "move") {
+                    entry.x = pageEditorDrag.x + dx;
+                    entry.y = pageEditorDrag.y + dy;
+                } else {
+                    if (handle.includes("e")) entry.width = Math.max(60, pageEditorDrag.width + dx);
+                    if (handle.includes("s")) entry.height = Math.max(32, pageEditorDrag.height + dy);
+                    if (handle.includes("w")) {
+                        entry.width = Math.max(60, pageEditorDrag.width - dx);
+                        entry.x = pageEditorDrag.x + dx;
+                    }
+                    if (handle.includes("n")) {
+                        entry.height = Math.max(32, pageEditorDrag.height - dy);
+                        entry.y = pageEditorDrag.y + dy;
+                    }
+                }
+                applyPageElement(entry);
+                setSelectedPageElement(entry.id);
+            });
+            frame.addEventListener("pointerup", () => {
+                pageEditorDrag = null;
+            });
+            document.body.appendChild(frame);
+            return frame;
+        }
+
+        function renderPageEditorFrames() {
+            if (!pageEditorActive) return;
+            pageElements.forEach((entry) => {
+                const frame = pageEditorFrames.get(entry.id) || makePageEditorFrame(entry);
+                pageEditorFrames.set(entry.id, frame);
+                const rect = entry.element.getBoundingClientRect();
+                frame.classList.toggle("active", entry.id === selectedPageElementId);
+                frame.style.left = `${rect.left}px`;
+                frame.style.top = `${rect.top}px`;
+                frame.style.width = `${rect.width}px`;
+                frame.style.height = `${rect.height}px`;
+                frame.style.display = rect.width < 8 || rect.height < 8 || rect.bottom < 0 || rect.top > window.innerHeight ? "none" : "block";
+            });
+        }
+
+        function clearPageEditorFrames() {
+            pageEditorFrames.forEach((frame) => frame.remove());
+            pageEditorFrames.clear();
+            pageEditorDrag = null;
+        }
+
         function setPageEditorMode(active) {
             if (active && !devModeEnabled) return;
             pageEditorActive = active;
             document.body.classList.toggle("page-editor-active", active);
-            setStatus(active ? "Page editor preview on. Drag-resize outlines are visible." : "Page editor preview off.");
+            if (active) {
+                setSceneMode(false);
+                setSettingsOpen(false);
+                discoverPageElements();
+                const firstVisible = [...pageElements.values()].find((entry) => {
+                    const rect = entry.element.getBoundingClientRect();
+                    return rect.width > 8 && rect.height > 8 && rect.bottom > 0 && rect.top < window.innerHeight;
+                });
+                setSelectedPageElement(firstVisible?.id || selectedPageElementId || pageElements.keys().next().value);
+                renderPageTimeline();
+                renderPageEditorFrames();
+            } else {
+                clearPageEditorFrames();
+            }
+            setStatus(active ? "Page editor on. Drag outlines, resize handles, or timeline chips." : "Page editor off.");
         }
 
         function setScenePageVisible(active) {
@@ -3197,7 +3763,7 @@ ${shader.fragmentShader}`
                 : projectionEntryProgress;
             const heroTitleOpacity = clamp(1 - y / (vh * 0.68));
             const titleOpacity = sceneMode ? heroTitleOpacity * 0.18 : heroTitleOpacity;
-            const navOpacity = sceneMode ? 0 : clamp(1 - y / (vh * 0.48), 0.14, 1);
+            const navOpacity = sceneMode || y > vh * 0.86 ? 0 : clamp(1 - y / (vh * 0.42), 0, 1);
 
             document.documentElement.style.setProperty("--video-opacity", videoOpacity.toFixed(3));
             document.documentElement.style.setProperty("--environment-opacity", environmentOpacity.toFixed(3));
@@ -3208,6 +3774,9 @@ ${shader.fragmentShader}`
             document.documentElement.style.setProperty("--nav-opacity", navOpacity.toFixed(3));
             document.documentElement.style.setProperty("--projection-progress", currentProjectionProgress.toFixed(3));
             document.documentElement.style.setProperty("--timeline-progress", currentProjectionProgress.toFixed(3));
+            pageTimelineTrack?.style.setProperty("--page-progress", (y / maxPageScroll()).toFixed(3));
+            const pagePlayhead = document.querySelector("#page-timeline-playhead");
+            if (pagePlayhead) pagePlayhead.style.left = `${clamp(y / maxPageScroll()) * 100}%`;
             document.documentElement.style.setProperty("--geo-panel-opacity", alphaForProject(0).toFixed(3));
             document.documentElement.style.setProperty("--iran-panel-opacity", alphaForProject(1).toFixed(3));
             if (titleFallback && !document.body.classList.contains("title-loaded")) {
@@ -3226,7 +3795,7 @@ ${shader.fragmentShader}`
             const top = scrollY + rect.top;
             const scrollable = Math.max(about.offsetHeight - vh, 1);
             const progress = clamp((scrollY - top) / scrollable);
-            const fade = smootherstep(clamp((scrollY - top + vh * 0.18) / (vh * 0.72)));
+            const fade = smootherstep(clamp((scrollY - top + vh * 0.42) / (vh * 0.86)));
             document.documentElement.style.setProperty("--about-video-opacity", fade.toFixed(3));
             [0, 1, 2].forEach((index) => {
                 const center = 0.18 + index * 0.31;
@@ -3521,27 +4090,44 @@ ${shader.fragmentShader}`
         let appliedQualityPreset = "";
         function applyQualityPreset() {
             const quality = effectiveQualityPreset();
-            const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.32) : quality === "medium" ? Math.floor(flowCount * 0.72) : flowCount;
+            const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.32) : quality === "medium" ? Math.floor(flowCount * 0.62) : quality === "high" ? Math.floor(flowCount * 0.84) : flowCount;
             flowGeometry.setDrawRange(0, flowDrawCount);
             assetObjects.forEach((object) => {
                 const cloud = object.userData?.shapeCloud;
                 if (!cloud) return;
                 const count = cloud.geometry.attributes.position.count;
-                const factor = quality === "low" ? 0.34 : quality === "medium" ? 0.72 : 1;
+                const factor = quality === "low" ? 0.34 : quality === "medium" ? 0.64 : quality === "high" ? 0.82 : 1;
                 cloud.geometry.setDrawRange(0, Math.max(80, Math.floor(count * factor)));
             });
             if (bloomPass) {
-                bloomPass.enabled = quality !== "low";
-                bloomPass.strength = quality === "cinematic" ? 0.26 : 0.18;
+                bloomPass.enabled = false;
+                bloomPass.strength = 0;
             }
             if (chromaticPass) {
-                chromaticPass.enabled = quality === "cinematic";
-                chromaticPass.uniforms.amount.value = quality === "cinematic" ? 0.00072 : 0.00032;
+                chromaticPass.enabled = false;
+                chromaticPass.uniforms.amount.value = 0;
             }
-            useComposerRender = Boolean(composer) && quality === "cinematic";
+            useComposerRender = false;
+            if (quality === "cinematic") {
+                visualSettings.screenOpacity = 0.35;
+                visualSettings.screenBrightness = 1.35;
+                visualSettings.screenSaturation = 1.55;
+                visualSettings.screenRgbEffect = 0.7;
+                visualSettings.screenScanline = 0.7;
+                screenMaterial.uniforms.uBrightness.value = visualSettings.screenBrightness;
+                screenMaterial.uniforms.uSaturation.value = visualSettings.screenSaturation;
+                screenMaterial.uniforms.uRgbEffect.value = visualSettings.screenRgbEffect;
+                screenMaterial.uniforms.uScanline.value = visualSettings.screenScanline;
+                screenMaterial.uniforms.uOpacity.value = visualSettings.screenOpacity * alphaForProject(4) * currentStageReveal;
+            }
             renderer.setPixelRatio(preferredPixelRatio());
             composer?.setPixelRatio(preferredPixelRatio());
             if (appliedQualityPreset !== quality) {
+                const rug = assetObjects.get("rug");
+                if (rug?.userData?.carpet) {
+                    rug.userData.carpet.carpetQuality = carpetQualityProfile();
+                    rebuildFlyingCarpetFringes(rug);
+                }
                 const source = animationVideoSource(animationVideos[currentAnimationIndex] || animationVideos[0]);
                 projectionVideoSource = source;
                 transitionVideoSource = source;
@@ -3720,6 +4306,7 @@ ${shader.fragmentShader}`
         function renderTimelineMarkers() {
             if (!timelineTrack) return;
             timelineTrack.querySelectorAll(".timeline-marker").forEach((marker) => marker.remove());
+            renderTimelineSections(timelineTrack, false);
             cameraKeyframes.forEach((keyframe, index) => {
                 const marker = document.createElement("button");
                 marker.type = "button";
@@ -3955,7 +4542,7 @@ ${shader.fragmentShader}`
 
         function updateAmbientParticles(elapsed) {
             const quality = effectiveQualityPreset();
-            const qualityCap = quality === "low" ? 320 : quality === "medium" ? 700 : ambientParticleCount;
+            const qualityCap = quality === "low" ? 280 : quality === "medium" ? 560 : quality === "high" ? 800 : ambientParticleCount;
             const drawCount = Math.min(ambientParticleCount, qualityCap, Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
             ambientParticleGeometry.setDrawRange(0, drawCount);
             ambientParticles.visible = drawCount > 0 && currentEnvironmentOpacity > 0.06;
@@ -3976,6 +4563,25 @@ ${shader.fragmentShader}`
             }
             ambientParticleGeometry.attributes.position.needsUpdate = true;
             ambientParticleGeometry.attributes.color.needsUpdate = true;
+        }
+
+        function updatePerformanceOverlay() {
+            const now = performance.now();
+            perfFrames += 1;
+            if (now - perfLastStamp >= 500) {
+                perfFpsValue = Math.round((perfFrames * 1000) / Math.max(1, now - perfLastStamp));
+                perfFrames = 0;
+                perfLastStamp = now;
+            }
+            const quality = effectiveQualityPreset();
+            const rugProfile = carpetQualityProfile();
+            const flowRange = flowGeometry.drawRange?.count || flowCount;
+            const ambientRange = ambientParticleGeometry.drawRange?.count || 0;
+            if (perfFps) perfFps.textContent = String(perfFpsValue);
+            if (perfFrame) perfFrame.textContent = `${renderer.info.render.calls} calls / ${Math.round(renderer.info.render.triangles / 1000)}k tris`;
+            if (perfQuality) perfQuality.textContent = `${quality} / ${rugProfile.label}`;
+            if (perfParticles) perfParticles.textContent = `${flowRange + ambientRange} active`;
+            if (perfRug) perfRug.textContent = `${rugProfile.segX}x${rugProfile.segZ}${rugProfile.fringes ? " fringe" : " no fringe"}`;
         }
 
         function updateHourglassSand(elapsed) {
@@ -4412,12 +5018,81 @@ ${shader.fragmentShader}`
             if (!animationPaused && pendingAnimationIndex === null) setAnimationVideo(currentAnimationIndex + 1, 1);
         });
 
+        pageEditorCloseBtn?.addEventListener("click", () => setPageEditorMode(false));
+        pageElementSelect?.addEventListener("change", () => setSelectedPageElement(pageElementSelect.value));
+        const updateSelectedPageElementFromInputs = () => {
+            const entry = pageElements.get(selectedPageElementId);
+            if (!entry) return;
+            entry.timeline = Number(pageElementTimeline?.value ?? entry.timeline);
+            entry.x = Number(pageElementX?.value ?? entry.x);
+            entry.y = Number(pageElementY?.value ?? entry.y);
+            entry.width = Number(pageElementWidth?.value ?? entry.width);
+            entry.height = Number(pageElementHeight?.value ?? entry.height);
+            entry.opacity = Number(pageElementOpacity?.value ?? entry.opacity);
+            entry.font = pageElementFont?.value ?? entry.font;
+            entry.color = pageElementColor?.value ?? entry.color;
+            if (pageElementText) writePageElementText(entry, pageElementText.value);
+            applyPageElement(entry);
+            setSelectedPageElement(entry.id);
+        };
+        [pageElementTimeline, pageElementX, pageElementY, pageElementWidth, pageElementHeight, pageElementOpacity, pageElementFont, pageElementColor].forEach((input) => {
+            input?.addEventListener("input", updateSelectedPageElementFromInputs);
+        });
+        pageElementText?.addEventListener("input", updateSelectedPageElementFromInputs);
+        pageAddTextBtn?.addEventListener("click", () => {
+            const entry = createPageTextElement({ timeline: clamp(window.scrollY / maxPageScroll()), text: "New text element" });
+            discoverPageElements();
+            setSelectedPageElement(entry.id);
+            renderPageTimeline();
+            renderPageEditorFrames();
+        });
+        pageResetElementBtn?.addEventListener("click", () => {
+            const entry = pageElements.get(selectedPageElementId);
+            if (!entry) return;
+            entry.x = 0;
+            entry.y = 0;
+            entry.opacity = 1;
+            entry.font = "";
+            entry.color = "#ffffff";
+            const rect = entry.element.getBoundingClientRect();
+            entry.width = Math.round(rect.width);
+            entry.height = Math.round(rect.height);
+            applyPageElement(entry);
+            setSelectedPageElement(entry.id);
+        });
+        pageSaveConfigBtn?.addEventListener("click", () => {
+            localStorage.setItem("pouya-ai-page-editor-config", JSON.stringify(serializePageConfig()));
+            setStatus("Page editor config saved in this browser.");
+        });
+        pageLoadConfigBtn?.addEventListener("click", () => {
+            const raw = localStorage.getItem("pouya-ai-page-editor-config");
+            if (!raw) return setStatus("No saved page editor config found.");
+            applyPageElementConfig(JSON.parse(raw));
+            setStatus("Page editor config loaded.");
+        });
+        pageExportConfigBtn?.addEventListener("click", () => {
+            const blob = new Blob([JSON.stringify(serializePageConfig(), null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "pouya-ai-page-editor-config.json";
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+        pageImportConfigFile?.addEventListener("change", async () => {
+            const file = pageImportConfigFile.files?.[0];
+            if (!file) return;
+            applyPageElementConfig(JSON.parse(await file.text()));
+            pageImportConfigFile.value = "";
+            setStatus("Page editor config imported.");
+        });
+        pageTimelineAddBtn?.addEventListener("click", () => pageAddTextBtn?.click());
+
         window.addEventListener("pointerdown", onPointerDown);
         window.addEventListener("dblclick", onProjectionDoubleClick);
         window.addEventListener("pointermove", (event) => {
             pointerTarget.x = (event.clientX / window.innerWidth - 0.5) * 2;
             pointerTarget.y = (event.clientY / window.innerHeight - 0.5) * 2;
-            const interactiveUi = event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock");
+            const interactiveUi = event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock, #page-editor-panel, #page-timeline-dock, .page-editor-frame");
             if (!grabbedProjection && !sceneMode && currentEnvironmentOpacity > 0.2 && !interactiveUi && updateFlyingCarpetPointer(event)) {
                 if (draggedCarpet) event.preventDefault();
                 return;
@@ -4439,7 +5114,7 @@ ${shader.fragmentShader}`
                         const velocity = grabbedProjection.userData.dragVelocity;
                         grabbedProjection.rotation.z += (clamp(-velocity.x * 3.6, -0.5, 0.5) - grabbedProjection.rotation.z) * 0.18;
                         grabbedProjection.rotation.x += (clamp(velocity.y * 2.5, -0.34, 0.34) - grabbedProjection.rotation.x) * 0.16;
-                        grabbedProjection.rotation.y += (clamp(velocity.z * 2.1, -0.28, 0.28) - grabbedProjection.rotation.y) * 0.12;
+                        orientLampHandleToCamera(grabbedProjection, 0.22);
                         updateSpoutFromLamp(grabbedProjection);
                     }
                 } else if (axis === "screen") {
@@ -4451,8 +5126,12 @@ ${shader.fragmentShader}`
                         vx: -((event.clientY - grabLastY) / dt) * 0.095
                     };
                 } else if (axis === "dual-return") {
-                    grabbedProjection.rotation.y = grabStartRotations.y + dx * 0.006;
-                    grabbedProjection.rotation.x = grabStartRotations.x + dy * 0.0045;
+                    const parentInv = grabbedProjection.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+                    const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).applyQuaternion(parentInv).normalize();
+                    const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).applyQuaternion(parentInv).normalize();
+                    const yaw = new THREE.Quaternion().setFromAxisAngle(cameraUp, dx * 0.006);
+                    const pitch = new THREE.Quaternion().setFromAxisAngle(cameraRight, dy * 0.0045);
+                    grabbedProjection.quaternion.copy(grabStartQuaternion).premultiply(yaw).premultiply(pitch);
                     grabbedProjection.userData.inertia = {
                         type: "dual-return",
                         vy: ((event.clientX - grabLastX) / dt) * 0.08,
@@ -4502,6 +5181,13 @@ ${shader.fragmentShader}`
             if (key === "p") {
                 event.preventDefault();
                 setPageEditorMode(!pageEditorActive);
+            }
+            if (key === "l") {
+                event.preventDefault();
+                perfOverlayActive = !perfOverlayActive;
+                document.body.classList.toggle("perf-overlay-active", perfOverlayActive);
+                perfLastStamp = performance.now();
+                perfFrames = 0;
             }
             if (key === "v" && sceneMode) {
                 setScenePageVisible(true);
@@ -4646,6 +5332,10 @@ ${shader.fragmentShader}`
             updateVideoScreen(elapsed);
             updateProjectionState();
             updateChromaticCssPalette();
+            if (pageEditorActive) {
+                renderPageEditorFrames();
+            }
+            if (perfOverlayActive) updatePerformanceOverlay();
 
             if (scrollSyncToggle.checked && cameraKeyframes.length >= 2) {
                 applyCameraAnimation(currentProjectionProgress, sceneMode, cameraThirdPerson && sceneMode);
@@ -4702,6 +5392,15 @@ ${shader.fragmentShader}`
         transformControls.enabled = false;
         applyProjectTextToCards();
         syncProjectSettingInputs("geo");
+        discoverPageElements();
+        const savedPageConfig = localStorage.getItem("pouya-ai-page-editor-config");
+        if (savedPageConfig) {
+            try {
+                applyPageElementConfig(JSON.parse(savedPageConfig));
+            } catch (error) {
+                console.warn("Could not restore page editor config", error);
+            }
+        }
         if (!cameraKeyframes.length) {
             defaultCameraKeyframes.forEach((keyframe) => cameraKeyframes.push({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] }));
             selectedCameraKeyframe = 0;

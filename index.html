@@ -167,6 +167,24 @@
             </div>
 
             <details class="hud-details">
+                <summary>Main controls <i class="ph ph-gauge" aria-hidden="true"></i></summary>
+                <div class="settings-grid">
+                    <label for="setting-quality-preset-main">Quality</label>
+                    <select id="setting-quality-preset-main" class="hud-select live-setting" data-setting="qualityPreset">
+                        <option value="auto" selected>Auto</option>
+                        <option value="low">Battery</option>
+                        <option value="medium">Balanced</option>
+                        <option value="high">Beautiful</option>
+                        <option value="cinematic">Ultra / Cinematic</option>
+                    </select>
+                    <span class="setting-value" data-value-for="qualityPreset">auto</span>
+                    <label>Keybinds</label>
+                    <div class="setting-help">type pouya, then H scene, O settings, P page editor, L performance</div>
+                    <span class="setting-value">top</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
                 <summary>Liquid glass panels <i class="ph ph-sliders-horizontal" aria-hidden="true"></i></summary>
                 <div class="settings-grid">
                     <label for="setting-glass-blur">Blur</label>
@@ -253,9 +271,10 @@
                     <label for="setting-quality-preset">Quality</label>
                     <select id="setting-quality-preset" class="hud-select live-setting" data-setting="qualityPreset">
                         <option value="auto" selected>Auto</option>
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="cinematic">Cinematic</option>
+                        <option value="low">Battery</option>
+                        <option value="medium">Balanced</option>
+                        <option value="high">Beautiful</option>
+                        <option value="cinematic">Ultra / Cinematic</option>
                     </select>
                     <span class="setting-value" data-value-for="qualityPreset">auto</span>
                     <label for="setting-global-illumination">Global illum.</label>
@@ -440,6 +459,8 @@
                     <label>String gravity</label><input class="hud-range live-setting" data-setting="carpetFringeGravity" type="range" min="0" max="1.5" step="0.01" value="0.42"><span class="setting-value" data-value-for="carpetFringeGravity">0.42</span>
                     <label>Self collision</label><input class="live-setting" data-setting="carpetSelfCollision" type="checkbox" checked><span class="setting-value" data-value-for="carpetSelfCollision">on</span>
                     <label>Collision thickness</label><input class="hud-range live-setting" data-setting="carpetCollisionThickness" type="range" min="0.04" max="0.2" step="0.01" value="0.2"><span class="setting-value" data-value-for="carpetCollisionThickness">0.20</span>
+                    <label>Rug stretch</label><input class="hud-range live-setting" data-setting="carpetRugStretch" type="range" min="0" max="1" step="0.01" value="0.18"><span class="setting-value" data-value-for="carpetRugStretch">0.18</span>
+                    <label>Fringe stretch</label><input class="hud-range live-setting" data-setting="carpetFringeStretch" type="range" min="0" max="1" step="0.01" value="0.1"><span class="setting-value" data-value-for="carpetFringeStretch">0.10</span>
                 </div>
             </details>
             <details class="hud-details">
@@ -461,6 +482,70 @@
         </div>
     </aside>
 
+    <aside id="page-editor-panel" class="liquid-glass page-editor-panel" aria-label="Page editor controls">
+        <div class="scene-hud-header flex items-center justify-between gap-3">
+            <div>
+                <div class="text-[11px] uppercase tracking-[0.12em] text-brand-cyan/80 font-extrabold">Page Editor</div>
+                <div class="text-sm font-semibold text-white/90">Scroll page sequence</div>
+            </div>
+            <button id="page-editor-close-btn" class="hud-button !w-9 !min-h-9" type="button" aria-label="Close page editor">
+                <i class="ph ph-x text-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <details class="hud-section hud-collapse">
+            <summary>Selected element <i class="ph ph-cursor-click" aria-hidden="true"></i></summary>
+            <div class="settings-grid">
+                <label for="page-element-select">Element</label>
+                <select id="page-element-select" class="hud-select"></select>
+                <span class="setting-value">select</span>
+                <label for="page-element-timeline">Timeline</label>
+                <input id="page-element-timeline" class="hud-range" type="range" min="0" max="1" step="0.001" value="0">
+                <span class="setting-value" id="page-element-timeline-value">0.000</span>
+                <label for="page-element-x">X/Y</label>
+                <input id="page-element-x" class="hud-input" type="number" step="1">
+                <input id="page-element-y" class="hud-input" type="number" step="1">
+                <label for="page-element-width">W/H</label>
+                <input id="page-element-width" class="hud-input" type="number" step="1">
+                <input id="page-element-height" class="hud-input" type="number" step="1">
+                <label for="page-element-opacity">Opacity</label>
+                <input id="page-element-opacity" class="hud-range" type="range" min="0" max="1" step="0.01" value="1">
+                <span class="setting-value" id="page-element-opacity-value">1</span>
+                <label for="page-element-font">Font</label>
+                <select id="page-element-font" class="hud-select">
+                    <option value="">Default</option>
+                    <option value="playfair">Editorial Serif</option>
+                    <option value="cinematic">Cinematic Serif</option>
+                    <option value="modern">Modern Sans</option>
+                    <option value="system">System Clean</option>
+                </select>
+                <span class="setting-value">font</span>
+                <label for="page-element-color">Color</label>
+                <input id="page-element-color" class="hud-color" type="color" value="#ffffff">
+                <span class="setting-value">text</span>
+            </div>
+            <div class="px-[11px] pb-[11px]">
+                <label class="mb-1 block text-[11px] font-bold text-white/56" for="page-element-text">Text content</label>
+                <textarea id="page-element-text" class="hud-input page-editor-textarea" spellcheck="true"></textarea>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    <button id="page-add-text-btn" class="hud-button" type="button"><i class="ph ph-plus" aria-hidden="true"></i>Add Text</button>
+                    <button id="page-reset-element-btn" class="hud-button" type="button"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Reset Element</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="hud-section hud-collapse">
+            <summary>Configs <i class="ph ph-floppy-disk" aria-hidden="true"></i></summary>
+            <div class="scene-hud-row two">
+                <button id="page-save-config-btn" class="hud-button" type="button"><i class="ph ph-floppy-disk" aria-hidden="true"></i>Save Browser</button>
+                <button id="page-load-config-btn" class="hud-button" type="button"><i class="ph ph-folder-open" aria-hidden="true"></i>Load Browser</button>
+                <button id="page-export-config-btn" class="hud-button" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i>Export JSON</button>
+                <label for="page-import-config-file" class="hud-file"><i class="ph ph-upload" aria-hidden="true"></i>Import JSON</label>
+                <input id="page-import-config-file" type="file" accept="application/json,.json">
+            </div>
+        </details>
+    </aside>
+
     <nav class="site-nav fixed top-0 left-0 right-0 z-30 px-3">
         <div class="nav-inner liquid-glass mx-auto flex w-full max-w-7xl items-center justify-between gap-5 px-5 md:px-8">
             <a href="#" class="font-display text-xl font-semibold tracking-normal text-white">Pouya AI</a>
@@ -480,8 +565,8 @@
     <main class="site-shell relative z-10">
         <section class="hero px-5 text-center md:px-8">
             <h1 class="sr-only">Pouya AI</h1>
-            <div id="title-fallback" class="hero-title-fallback" aria-hidden="true">Pouya AI</div>
-            <div class="hero-copy reveal">
+            <div id="title-fallback" class="hero-title-fallback" data-page-element="hero-title" aria-hidden="true">Pouya AI</div>
+            <div class="hero-copy reveal" data-page-element="hero-subtitle">
                 <div class="eyebrow liquid-glass mb-5">
                     <span class="h-2 w-2 rounded-full bg-brand-cyan shadow-[0_0_18px_rgba(97,245,255,0.9)]"></span>
                     Digital Heritage & Intelligence
@@ -497,7 +582,7 @@
             <div class="projection-sticky">
                 <div class="projection-copy-shell">
                     <div class="projection-panel-wrap">
-                        <article class="projection-panel geo liquid-glass active" data-project-card="geo">
+                        <article class="projection-panel geo liquid-glass active" data-project-card="geo" data-page-element="project-geo">
                             <div class="project-kicker">Genie Projection 01</div>
                             <h2 class="project-title">GeoIntel Interactive</h2>
                             <p class="project-copy">
@@ -506,7 +591,7 @@
                             <a href="https://pouyaii.github.io/" target="_blank" class="liquid-action liquid-glass">Launch Geointel <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                         </article>
 
-                        <article class="projection-panel iran liquid-glass" data-project-card="iran">
+                        <article class="projection-panel iran liquid-glass" data-project-card="iran" data-page-element="project-iran">
                             <div class="project-kicker text-red-200">Genie Projection 02</div>
                             <h2 class="project-title">Iran Protest Map</h2>
                             <p class="project-copy">
@@ -515,7 +600,7 @@
                             <a href="https://pouyaii.github.io/Iran/" target="_blank" class="liquid-action liquid-glass">Launch Iran Map <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                         </article>
 
-                        <article class="projection-panel history liquid-glass" data-project-card="history">
+                        <article class="projection-panel history liquid-glass" data-project-card="history" data-page-element="project-history">
                             <div class="project-kicker text-amber-100">Genie Projection 03</div>
                             <h2 class="project-title">History of Iran Layered</h2>
                             <p class="project-copy">
@@ -524,7 +609,7 @@
                             <a href="https://pouyaii.github.io/Iran-History/" target="_blank" class="liquid-action liquid-glass">Preview Concept <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
                         </article>
 
-                        <article class="projection-panel timeline liquid-glass" data-project-card="timeline">
+                        <article class="projection-panel timeline liquid-glass" data-project-card="timeline" data-page-element="project-timeline">
                             <div class="project-kicker text-violet-100">Genie Projection 04</div>
                             <h2 class="project-title">Tech & Politics Timeline</h2>
                             <p class="project-copy">
@@ -536,7 +621,7 @@
                             </div>
                         </article>
 
-                        <article class="projection-panel animations liquid-glass" data-project-card="animations">
+                        <article class="projection-panel animations liquid-glass" data-project-card="animations" data-page-element="project-animations">
                             <div class="project-kicker text-cyan-100">Genie Projection 05</div>
                             <h2 class="project-title">AI Animations</h2>
                             <p class="project-copy">
@@ -555,21 +640,21 @@
                 <source src="assets/media/blackholes-720p.mp4" type="video/mp4">
             </video>
             <div class="about-scroll-copy mx-auto max-w-7xl">
-                <article class="about-panel liquid-glass" data-about-panel="0">
+                <article class="about-panel liquid-glass" data-about-panel="0" data-page-element="about-0">
                     <div class="section-kicker mb-3">About</div>
                     <p>I build interactive digital projects that combine art, politics, history, data visualization, design, and AI-assisted software creation. My work focuses on turning complex ideas into explorable visual experiences, from geopolitical mapping tools and historical timelines to cinematic AI animations and experimental web interfaces.</p>
                 </article>
-                <article class="about-panel liquid-glass" data-about-panel="1">
+                <article class="about-panel liquid-glass" data-about-panel="1" data-page-element="about-1">
                     <p>These applications represent a journey into AI-driven storytelling and interactive web experiences. By leveraging modern web technologies and AI, software can increasingly be created on demand around specific ideas, questions, and creative visions. Instead of being limited to static articles, videos, or dashboards, new tools make it possible to build custom digital experiences that let users explore information directly.</p>
                 </article>
-                <article class="about-panel liquid-glass" data-about-panel="2">
+                <article class="about-panel liquid-glass" data-about-panel="2" data-page-element="about-2">
                     <p>This portfolio is an ongoing experiment in that new generation of software: using AI, code, design, and visual art to make research, history, and global affairs more intuitive, immersive, and alive. It is also a living workspace for testing how cinematic media, spatial interfaces, data, and historical imagination can merge into custom software that feels built around a specific idea rather than squeezed into a generic format.</p>
                 </article>
             </div>
         </section>
 
         <footer class="px-5 pb-16 pt-4 md:px-8">
-            <div class="mx-auto flex max-w-7xl flex-col gap-8 border-t border-white/10 pt-10 text-center md:flex-row md:items-center md:justify-between md:text-left">
+            <div class="mx-auto flex max-w-7xl flex-col gap-8 border-t border-white/10 pt-10 text-center md:flex-row md:items-center md:justify-between md:text-left" data-page-element="footer">
                 <div class="font-display text-3xl font-semibold italic text-white/28">Pouya AI</div>
                 <div class="flex flex-wrap justify-center gap-x-5 gap-y-3 text-xs font-semibold text-white/38 md:justify-end">
                     <span>Artificial Intelligence</span>
@@ -596,13 +681,31 @@
                 <div class="text-xs text-white/56">The full strip maps to the page scroll range.</div>
             </div>
             <div class="flex items-center gap-2">
-                <button id="timeline-expand-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-corners-out" aria-hidden="true"></i></button>
                 <button id="timeline-add-keyframe-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-plus-circle" aria-hidden="true"></i></button>
             </div>
         </div>
         <div id="timeline-track" class="timeline-track">
             <div id="timeline-playhead" class="timeline-playhead"></div>
         </div>
+    </div>
+    <div id="page-timeline-dock" class="camera-timeline-dock page-timeline-dock liquid-glass" aria-label="Scroll page sequence timeline">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <div class="text-[10px] uppercase tracking-[0.12em] text-brand-cyan/80 font-extrabold">Scroll Page Sequence</div>
+                <div class="text-xs text-white/56">Drag element chips to anchor text and panels along page scroll.</div>
+            </div>
+            <button id="page-timeline-add-btn" class="hud-button !min-h-8 !px-2" type="button"><i class="ph ph-plus-circle" aria-hidden="true"></i></button>
+        </div>
+        <div id="page-timeline-track" class="timeline-track page-timeline-track">
+            <div id="page-timeline-playhead" class="timeline-playhead"></div>
+        </div>
+    </div>
+    <div id="perf-overlay" class="perf-overlay liquid-glass" aria-hidden="true">
+        <div><span>FPS</span><b id="perf-fps">--</b></div>
+        <div><span>Frame</span><b id="perf-frame">-- ms</b></div>
+        <div><span>Quality</span><b id="perf-quality">--</b></div>
+        <div><span>Particles</span><b id="perf-particles">--</b></div>
+        <div><span>Rug</span><b id="perf-rug">--</b></div>
     </div>
     <div id="heart-burst" class="heart-burst" aria-hidden="true">&#9829;</div>
 
