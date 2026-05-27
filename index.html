@@ -167,7 +167,7 @@
             </div>
 
             <details class="hud-details">
-                <summary>Main controls <i class="ph ph-gauge" aria-hidden="true"></i></summary>
+                <summary>Performance <i class="ph ph-gauge" aria-hidden="true"></i></summary>
                 <div class="settings-grid">
                     <label for="setting-quality-preset-main">Quality</label>
                     <select id="setting-quality-preset-main" class="hud-select live-setting" data-setting="qualityPreset">
@@ -178,9 +178,31 @@
                         <option value="cinematic">Ultra / Cinematic</option>
                     </select>
                     <span class="setting-value" data-value-for="qualityPreset">auto</span>
-                    <label>Keybinds</label>
-                    <div class="setting-help">type pouya, then H scene, O settings, P page editor, L performance</div>
-                    <span class="setting-value">top</span>
+                    <label for="setting-perf-lighting">Lighting</label>
+                    <input id="setting-perf-lighting" class="hud-range live-setting" data-setting="performanceLighting" type="range" min="0.35" max="1.25" step="0.05" value="1">
+                    <span class="setting-value" data-value-for="performanceLighting">1.00</span>
+                    <label for="setting-perf-particles">Particles</label>
+                    <input id="setting-perf-particles" class="hud-range live-setting" data-setting="performanceParticles" type="range" min="0.15" max="1.15" step="0.05" value="1">
+                    <span class="setting-value" data-value-for="performanceParticles">1.00</span>
+                    <label for="setting-perf-rug">Rug detail</label>
+                    <input id="setting-perf-rug" class="hud-range live-setting" data-setting="performanceRugDetail" type="range" min="0.25" max="1" step="0.05" value="1">
+                    <span class="setting-value" data-value-for="performanceRugDetail">1.00</span>
+                    <label for="setting-perf-shadows">Shadows</label>
+                    <input id="setting-perf-shadows" class="live-setting" data-setting="performanceShadows" type="checkbox" checked>
+                    <span class="setting-value" data-value-for="performanceShadows">on</span>
+                </div>
+            </details>
+
+            <details class="hud-details">
+                <summary>Keybinds <i class="ph ph-keyboard" aria-hidden="true"></i></summary>
+                <div class="keybind-list">
+                    <span>Unlock dev controls</span><b>type pouya</b>
+                    <span>Scene editor</span><b>H</b>
+                    <span>Settings</span><b>O</b>
+                    <span>Page editor</span><b>P</b>
+                    <span>Performance overlay</span><b>L</b>
+                    <span>Layout preview in scene</span><b>K</b>
+                    <span>Undo / redo</span><b>Ctrl Z / Ctrl Y</b>
                 </div>
             </details>
 
@@ -310,51 +332,6 @@
                     <label for="setting-blackhole-nonorbit">Hero video</label>
                     <input id="setting-blackhole-nonorbit" class="live-setting" data-setting="blackholeNonOrbit" type="checkbox" checked>
                     <span class="setting-value" data-value-for="blackholeNonOrbit">non-orbit</span>
-                </div>
-            </details>
-
-            <details class="hud-details">
-                <summary>Project text <i class="ph ph-textbox" aria-hidden="true"></i></summary>
-                <div class="settings-grid">
-                    <label for="setting-project-plane">Glass plane</label>
-                    <input id="setting-project-plane" class="live-setting" data-setting="projectGlassPlane" type="checkbox" checked>
-                    <span class="setting-value" data-value-for="projectGlassPlane">on</span>
-                    <label for="setting-project-font">Font preset</label>
-                    <select id="setting-project-font" class="hud-select live-setting" data-setting="projectFontPreset">
-                        <option value="playfair">Editorial Serif</option>
-                        <option value="cinematic">Cinematic Serif</option>
-                        <option value="modern">Modern Sans</option>
-                        <option value="system">System Clean</option>
-                    </select>
-                    <span class="setting-value" data-value-for="projectFontPreset">playfair</span>
-                    <label for="setting-project-title-size">Title size</label>
-                    <input id="setting-project-title-size" class="hud-range live-setting" data-setting="projectTitleSize" type="range" min="6" max="96" step="1" value="37">
-                    <span class="setting-value" data-value-for="projectTitleSize">37</span>
-                    <label for="setting-project-body-size">Body size</label>
-                    <input id="setting-project-body-size" class="hud-range live-setting" data-setting="projectBodySize" type="range" min="5" max="24" step="1" value="17">
-                    <span class="setting-value" data-value-for="projectBodySize">17</span>
-                    <label for="setting-project-text-gap">Title/body gap</label>
-                    <input id="setting-project-text-gap" class="hud-range live-setting" data-setting="projectTextGap" type="range" min="4" max="140" step="1" value="22">
-                    <span class="setting-value" data-value-for="projectTextGap">22</span>
-                    <label for="setting-project-width">Text width</label>
-                    <input id="setting-project-width" class="hud-range live-setting" data-setting="projectTextWidth" type="range" min="340" max="720" step="10" value="500">
-                    <span class="setting-value" data-value-for="projectTextWidth">500</span>
-                    <label for="setting-project-text-y">Y angle</label>
-                    <input id="setting-project-text-y" class="hud-range live-setting" data-setting="projectTextRotateY" type="range" min="-18" max="18" step="0.5" value="13">
-                    <span class="setting-value" data-value-for="projectTextRotateY">13</span>
-                    <label for="project-text-target">Edit project</label>
-                    <select id="project-text-target" class="hud-select">
-                        <option value="geo">GeoIntel</option>
-                        <option value="iran">Iran Protest</option>
-                        <option value="history">Iran History</option>
-                        <option value="timeline">Timeline</option>
-                        <option value="animations">Animations</option>
-                    </select>
-                    <span class="setting-value">text</span>
-                </div>
-                <div class="px-[11px] pb-[11px]">
-                    <label class="mb-1 block text-[11px] font-bold text-white/56" for="project-description-editor">Selected project description</label>
-                    <textarea id="project-description-editor" class="hud-input" spellcheck="true"></textarea>
                 </div>
             </details>
 
@@ -496,18 +473,21 @@
         <details class="hud-section hud-collapse">
             <summary>Selected element <i class="ph ph-cursor-click" aria-hidden="true"></i></summary>
             <div class="settings-grid">
+                <label for="page-element-name">Name</label>
+                <input id="page-element-name" class="hud-input" type="text">
+                <span class="setting-value">label</span>
                 <label for="page-element-select">Element</label>
                 <select id="page-element-select" class="hud-select"></select>
                 <span class="setting-value">select</span>
                 <label for="page-element-timeline">Timeline</label>
                 <input id="page-element-timeline" class="hud-range" type="range" min="0" max="1" step="0.001" value="0">
-                <span class="setting-value" id="page-element-timeline-value">0.000</span>
+                <input id="page-element-timeline-number" class="hud-input" type="number" min="0" max="1" step="0.001" value="0">
                 <label for="page-element-x">X/Y</label>
-                <input id="page-element-x" class="hud-input" type="number" step="1">
-                <input id="page-element-y" class="hud-input" type="number" step="1">
+                <div class="paired-inputs"><input id="page-element-x" class="hud-input" type="number" step="1" aria-label="X offset"><input id="page-element-y" class="hud-input" type="number" step="1" aria-label="Y offset"></div>
+                <span class="setting-value">px</span>
                 <label for="page-element-width">W/H</label>
-                <input id="page-element-width" class="hud-input" type="number" step="1">
-                <input id="page-element-height" class="hud-input" type="number" step="1">
+                <div class="paired-inputs"><input id="page-element-width" class="hud-input" type="number" step="1" aria-label="Width"><input id="page-element-height" class="hud-input" type="number" step="1" aria-label="Height"></div>
+                <span class="setting-value">px</span>
                 <label for="page-element-opacity">Opacity</label>
                 <input id="page-element-opacity" class="hud-range" type="range" min="0" max="1" step="0.01" value="1">
                 <span class="setting-value" id="page-element-opacity-value">1</span>
@@ -531,6 +511,38 @@
                     <button id="page-add-text-btn" class="hud-button" type="button"><i class="ph ph-plus" aria-hidden="true"></i>Add Text</button>
                     <button id="page-reset-element-btn" class="hud-button" type="button"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>Reset Element</button>
                 </div>
+            </div>
+        </details>
+
+        <details class="hud-section hud-collapse">
+            <summary>Project text layout <i class="ph ph-textbox" aria-hidden="true"></i></summary>
+            <div class="settings-grid">
+                <label for="page-setting-project-plane">Glass plane</label>
+                <input id="page-setting-project-plane" class="live-setting" data-setting="projectGlassPlane" type="checkbox" checked>
+                <span class="setting-value" data-value-for="projectGlassPlane">on</span>
+                <label for="page-setting-project-font">Font preset</label>
+                <select id="page-setting-project-font" class="hud-select live-setting" data-setting="projectFontPreset">
+                    <option value="playfair">Editorial Serif</option>
+                    <option value="cinematic">Cinematic Serif</option>
+                    <option value="modern">Modern Sans</option>
+                    <option value="system">System Clean</option>
+                </select>
+                <span class="setting-value" data-value-for="projectFontPreset">playfair</span>
+                <label for="page-setting-project-title-size">Title size</label>
+                <input id="page-setting-project-title-size" class="hud-range live-setting" data-setting="projectTitleSize" type="range" min="6" max="96" step="1" value="37">
+                <span class="setting-value" data-value-for="projectTitleSize">37</span>
+                <label for="page-setting-project-body-size">Body size</label>
+                <input id="page-setting-project-body-size" class="hud-range live-setting" data-setting="projectBodySize" type="range" min="5" max="28" step="1" value="17">
+                <span class="setting-value" data-value-for="projectBodySize">17</span>
+                <label for="page-setting-project-text-gap">Title/body gap</label>
+                <input id="page-setting-project-text-gap" class="hud-range live-setting" data-setting="projectTextGap" type="range" min="4" max="180" step="1" value="22">
+                <span class="setting-value" data-value-for="projectTextGap">22</span>
+                <label for="page-setting-project-width">Text width</label>
+                <input id="page-setting-project-width" class="hud-range live-setting" data-setting="projectTextWidth" type="range" min="240" max="820" step="10" value="500">
+                <span class="setting-value" data-value-for="projectTextWidth">500</span>
+                <label for="page-setting-project-text-y">Y angle</label>
+                <input id="page-setting-project-text-y" class="hud-range live-setting" data-setting="projectTextRotateY" type="range" min="-28" max="28" step="0.5" value="13">
+                <span class="setting-value" data-value-for="projectTextRotateY">13</span>
             </div>
         </details>
 
@@ -617,7 +629,7 @@
                             </p>
                             <div class="project-actions">
                                 <a href="https://pouyaii.github.io/Timelines/" target="_blank" class="liquid-action liquid-glass">Preview Timeline <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
-                                <button id="hourglass-flip-btn" class="liquid-action liquid-glass icon-action" type="button" aria-label="Flip hourglass"><i class="ph ph-arrows-clockwise flip-left" aria-hidden="true"></i><i class="ph ph-hourglass-high" aria-hidden="true"></i><i class="ph ph-arrows-clockwise flip-right" aria-hidden="true"></i></button>
+                                <button id="hourglass-flip-btn" class="liquid-action liquid-glass icon-action hourglass-flip-action" type="button" aria-label="Flip hourglass"><span class="flip-arc flip-left" aria-hidden="true"></span><i class="ph ph-hourglass-high" aria-hidden="true"></i><span class="flip-arc flip-right" aria-hidden="true"></span></button>
                             </div>
                         </article>
 

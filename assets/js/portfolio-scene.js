@@ -56,8 +56,10 @@
         const timelineTrack = document.querySelector("#timeline-track");
         const pageEditorPanel = document.querySelector("#page-editor-panel");
         const pageEditorCloseBtn = document.querySelector("#page-editor-close-btn");
+        const pageElementName = document.querySelector("#page-element-name");
         const pageElementSelect = document.querySelector("#page-element-select");
         const pageElementTimeline = document.querySelector("#page-element-timeline");
+        const pageElementTimelineNumber = document.querySelector("#page-element-timeline-number");
         const pageElementTimelineValue = document.querySelector("#page-element-timeline-value");
         const pageElementX = document.querySelector("#page-element-x");
         const pageElementY = document.querySelector("#page-element-y");
@@ -222,6 +224,10 @@
             backgroundAlpha: 1,
             lampGlow: 2.4,
             qualityPreset: "auto",
+            performanceLighting: 1,
+            performanceParticles: 1,
+            performanceRugDetail: 1,
+            performanceShadows: true,
             projectGlassPlane: window.matchMedia("(max-width: 760px)").matches ? false : true,
             projectFontPreset: "playfair",
             projectTitleSize: 37,
@@ -476,6 +482,8 @@
         let pageElementCounter = 0;
         let selectedPageElementId = "";
         let pageEditorDrag = null;
+        let pageInputBefore = null;
+        let repairingPageSelection = false;
         let perfOverlayActive = false;
         let perfLastStamp = performance.now();
         let perfFrames = 0;
@@ -1403,6 +1411,7 @@
         function carpetQualityProfile() {
             const mobile = window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 760;
             const quality = effectiveQualityPreset();
+            const detailScale = Number(visualSettings.performanceRugDetail ?? 1);
             const profiles = {
                 low: {
                     label: "Battery",
@@ -1469,7 +1478,16 @@
                     material: 1
                 }
             };
-            return profiles[quality] || profiles.medium;
+            const profile = { ...(profiles[quality] || profiles.medium) };
+            if (detailScale < 0.95) {
+                profile.segX = Math.max(12, Math.round(profile.segX * detailScale));
+                profile.segZ = Math.max(8, Math.round(profile.segZ * detailScale));
+                profile.fringeBase = Math.max(18, Math.round(profile.fringeBase * detailScale));
+                profile.fringeMul = Math.max(4, Math.round(profile.fringeMul * detailScale));
+                profile.solverIterations = Math.max(1, Math.round(profile.solverIterations * Math.max(0.65, detailScale)));
+                if (detailScale < 0.4) profile.fringes = false;
+            }
+            return profile;
         }
 
         function makeFlyingCarpet() {
@@ -2346,7 +2364,7 @@ ${shader.fragmentShader}`
             const dx = cameraLocal.x - lamp.position.x;
             const dz = cameraLocal.z - lamp.position.z;
             if (Math.hypot(dx, dz) < 0.001) return;
-            const targetYaw = Math.atan2(dx, dz) + Math.PI * 0.5;
+            const targetYaw = Math.atan2(dx, dz) + Math.PI * 1.5;
             lamp.rotation.y += angleDelta(targetYaw, lamp.rotation.y) * strength;
         }
 
@@ -2438,10 +2456,39 @@ ${shader.fragmentShader}`
             redoStack.length = 0;
         }
 
+        function clonePageSnapshot(snapshot) {
+            return JSON.parse(JSON.stringify(snapshot));
+        }
+
+        function snapshotPageElement(entry) {
+            return entry ? pageElementData(entry) : null;
+        }
+
+        function pushPageAction(entry, before, after, label = "Page edit") {
+            if (!entry || !before || !after || JSON.stringify(before) === JSON.stringify(after)) return;
+            actionStack.push({
+                type: "page",
+                id: entry.id,
+                before: clonePageSnapshot(before),
+                after: clonePageSnapshot(after),
+                label
+            });
+            redoStack.length = 0;
+        }
+
         function runUndo() {
             const action = actionStack.pop();
             if (!action) return;
             if (action.type === "transform") applySnapshot(action.object, action.before);
+            if (action.type === "page") applySinglePageSnapshot(action.before);
+            if (action.type === "page-add") {
+                const entry = pageElements.get(action.snapshot.id);
+                entry?.element?.remove();
+                pageElements.delete(action.snapshot.id);
+                clearPageEditorFrames();
+                renderPageTimeline();
+                renderPageEditorFrames();
+            }
             if (action.type === "delete") {
                 action.parent.add(action.object);
                 registerEditable(action.object);
@@ -2460,6 +2507,8 @@ ${shader.fragmentShader}`
             const action = redoStack.pop();
             if (!action) return;
             if (action.type === "transform") applySnapshot(action.object, action.after);
+            if (action.type === "page") applySinglePageSnapshot(action.after);
+            if (action.type === "page-add") applySinglePageSnapshot(action.snapshot);
             if (action.type === "delete") {
                 action.parent.remove(action.object);
                 unregisterEditable(action.object);
@@ -3297,7 +3346,7 @@ ${shader.fragmentShader}`
             if (!element) return "";
             const title = element.querySelector?.(".project-title");
             const copy = element.querySelector?.(".project-copy");
-            const link = element.querySelector?.(".project-link");
+            const link = element.querySelector?.(".project-link, .liquid-action");
             if (title || copy || link) {
                 const blocks = [];
                 if (title) blocks.push(title.textContent.trim());
@@ -3313,7 +3362,7 @@ ${shader.fragmentShader}`
             if (!element) return;
             const title = element.querySelector?.(".project-title");
             const copy = element.querySelector?.(".project-copy");
-            const link = element.querySelector?.(".project-link");
+            const link = element.querySelector?.(".project-link, .liquid-action");
             if (title || copy || link) {
                 const blocks = text.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
                 if (title && blocks[0]) title.textContent = blocks[0];
@@ -3325,23 +3374,37 @@ ${shader.fragmentShader}`
             element.textContent = text;
         }
 
+        function persistPageElement(entry) {
+            if (!entry?.element) return;
+            entry.element.dataset.pageEditorLabel = entry.label || "";
+            entry.element.dataset.pageEditorTimeline = String(entry.timeline ?? 0);
+            entry.element.dataset.pageEditorX = String(entry.x ?? 0);
+            entry.element.dataset.pageEditorY = String(entry.y ?? 0);
+            entry.element.dataset.pageEditorWidth = String(entry.width ?? 0);
+            entry.element.dataset.pageEditorHeight = String(entry.height ?? 0);
+            entry.element.dataset.pageEditorOpacity = String(entry.opacity ?? 1);
+            entry.element.dataset.pageEditorFont = entry.font || "";
+            entry.element.dataset.pageEditorColor = entry.color || "#ffffff";
+            entry.element.dataset.pageEditorCustom = entry.custom ? "1" : "";
+        }
+
         function discoverPageElements() {
             const existingSelection = selectedPageElementId;
             pageElements.clear();
             document.querySelectorAll("[data-page-element]").forEach((element) => {
                 const id = element.dataset.pageElement;
                 if (!id) return;
-                let timeline = elementToPageTimeline(element, 0.2);
+                let timeline = element.dataset.pageEditorTimeline ? Number(element.dataset.pageEditorTimeline) : elementToPageTimeline(element, 0.2);
                 if (element.dataset.projectCard) {
                     const index = projectKeys.indexOf(element.dataset.projectCard);
-                    timeline = projectionIndexToPageTimeline(Math.max(0, index));
-                } else if (id === "hero-title") timeline = 0.018;
-                else if (id === "hero-subtitle") timeline = 0.056;
-                else if (id === "footer") timeline = 0.985;
+                    if (!element.dataset.pageEditorTimeline) timeline = projectionIndexToPageTimeline(Math.max(0, index));
+                } else if (!element.dataset.pageEditorTimeline && id === "hero-title") timeline = 0.018;
+                else if (!element.dataset.pageEditorTimeline && id === "hero-subtitle") timeline = 0.056;
+                else if (!element.dataset.pageEditorTimeline && id === "footer") timeline = 0.985;
                 const rect = element.getBoundingClientRect();
                 const entry = {
                     id,
-                    label: pageElementLabel(element, id),
+                    label: element.dataset.pageEditorLabel || pageElementLabel(element, id),
                     element,
                     timeline,
                     x: Number(element.dataset.pageEditorX || 0),
@@ -3352,7 +3415,7 @@ ${shader.fragmentShader}`
                     font: element.dataset.pageEditorFont || "",
                     color: element.dataset.pageEditorColor || "#ffffff",
                     text: readPageElementText(element),
-                    custom: false
+                    custom: element.dataset.pageEditorCustom === "1"
                 };
                 pageElements.set(id, entry);
                 applyPageElement(entry);
@@ -3370,6 +3433,7 @@ ${shader.fragmentShader}`
 
         function applyPageElement(entry) {
             if (!entry?.element) return;
+            persistPageElement(entry);
             entry.element.style.setProperty("--page-editor-x", `${entry.x || 0}px`);
             entry.element.style.setProperty("--page-editor-y", `${entry.y || 0}px`);
             entry.element.style.setProperty("--page-editor-opacity", entry.opacity ?? 1);
@@ -3379,18 +3443,32 @@ ${shader.fragmentShader}`
                 entry.element.style.setProperty("--page-editor-width", `${entry.width}px`);
             }
             if (entry.height) entry.element.style.minHeight = `${entry.height}px`;
-            if (entry.color) entry.element.style.color = entry.color;
+            if (entry.color) {
+                entry.element.style.color = entry.color;
+                entry.element.querySelectorAll?.(".project-title, .project-copy, .project-link, p").forEach((child) => {
+                    child.style.color = entry.color;
+                });
+            }
             const family = pageFontFamily(entry.font);
-            if (family) entry.element.style.fontFamily = family;
+            if (family) {
+                entry.element.style.fontFamily = family;
+                entry.element.querySelectorAll?.(".project-title, .project-copy, .project-link, p").forEach((child) => {
+                    child.style.fontFamily = family;
+                });
+            }
         }
 
         function setSelectedPageElement(id) {
             if (!pageElements.has(id)) return;
             selectedPageElementId = id;
             const entry = pageElements.get(id);
+            const selectedOption = pageElementSelect?.querySelector?.(`option[value="${CSS.escape(id)}"]`);
+            if (selectedOption) selectedOption.textContent = entry.label || id;
+            if (pageElementName) pageElementName.value = entry.label || "";
             if (pageElementSelect) pageElementSelect.value = id;
             if (pageElementTimeline) pageElementTimeline.value = entry.timeline.toFixed(3);
             if (pageElementTimelineValue) pageElementTimelineValue.textContent = entry.timeline.toFixed(3);
+            if (pageElementTimelineNumber) pageElementTimelineNumber.value = entry.timeline.toFixed(3);
             if (pageElementX) pageElementX.value = Math.round(entry.x || 0);
             if (pageElementY) pageElementY.value = Math.round(entry.y || 0);
             if (pageElementWidth) pageElementWidth.value = Math.round(entry.width || entry.element.getBoundingClientRect().width || 0);
@@ -3407,6 +3485,7 @@ ${shader.fragmentShader}`
         function pageElementData(entry) {
             return {
                 id: entry.id,
+                label: entry.label,
                 timeline: entry.timeline,
                 x: entry.x,
                 y: entry.y,
@@ -3435,6 +3514,19 @@ ${shader.fragmentShader}`
             renderPageEditorFrames();
         }
 
+        function applySinglePageSnapshot(snapshot) {
+            if (!snapshot) return;
+            let entry = pageElements.get(snapshot.id);
+            if (!entry && snapshot.custom) entry = createPageTextElement(snapshot);
+            if (!entry) return;
+            Object.assign(entry, snapshot);
+            if (snapshot.text !== undefined) writePageElementText(entry, snapshot.text);
+            applyPageElement(entry);
+            setSelectedPageElement(entry.id);
+            updateProjectCards();
+            updateScrollState();
+        }
+
         function serializePageConfig() {
             return {
                 version: 1,
@@ -3450,7 +3542,9 @@ ${shader.fragmentShader}`
                 element = document.createElement("div");
                 element.className = "projection-panel glass-plane-enabled custom-page-text";
                 element.dataset.pageElement = id;
-                element.innerHTML = `<h3 class="project-title">${seed.text || "New text element"}</h3>`;
+                const initialText = seed.text || `${seed.label || "Custom title"}\n\nCustom body text`;
+                const [initialTitle, initialBody = "Custom body text"] = initialText.split(/\n\s*\n/);
+                element.innerHTML = `<div class="project-kicker">Custom</div><h3 class="project-title">${initialTitle || "Custom title"}</h3><p class="project-copy">${initialBody}</p>`;
                 document.querySelector(".projection-copy-shell")?.appendChild(element);
             }
             const rect = element.getBoundingClientRect();
@@ -3530,22 +3624,27 @@ ${shader.fragmentShader}`
                 chip.type = "button";
                 chip.className = `page-timeline-chip ${entry.id === selectedPageElementId ? "active" : ""}`;
                 chip.style.left = `${clamp(entry.timeline) * 100}%`;
-                chip.textContent = entry.label;
+                chip.textContent = (entry.label || entry.id || "?").trim().charAt(0).toUpperCase();
+                chip.style.setProperty("--chip-color", entry.element.dataset.projectCard ? blendedProjectPaletteForKey(entry.element.dataset.projectCard, 0.84) : entry.id.startsWith("about") ? "rgba(150, 116, 255, 0.9)" : "rgba(97, 245, 255, 0.9)");
                 chip.title = `${entry.label} @ ${entry.timeline.toFixed(3)}`;
                 chip.addEventListener("click", () => setSelectedPageElement(entry.id));
                 chip.addEventListener("pointerdown", (event) => {
                     event.preventDefault();
                     setSelectedPageElement(entry.id);
+                    const before = snapshotPageElement(entry);
                     chip.setPointerCapture(event.pointerId);
                     const rect = pageTimelineTrack.getBoundingClientRect();
                     const onMove = (moveEvent) => {
                         entry.timeline = clamp((moveEvent.clientX - rect.left) / Math.max(rect.width, 1));
+                        persistPageElement(entry);
                         chip.style.left = `${entry.timeline * 100}%`;
                         setSelectedPageElement(entry.id);
+                        updateProjectCards();
                     };
                     const onUp = () => {
                         chip.removeEventListener("pointermove", onMove);
                         chip.removeEventListener("pointerup", onUp);
+                        pushPageAction(entry, before, snapshotPageElement(entry), "Move page timeline tac");
                     };
                     chip.addEventListener("pointermove", onMove);
                     chip.addEventListener("pointerup", onUp);
@@ -3571,6 +3670,7 @@ ${shader.fragmentShader}`
                     handle: handle || "move",
                     startX: event.clientX,
                     startY: event.clientY,
+                    before: snapshotPageElement(entry),
                     x: entry.x || 0,
                     y: entry.y || 0,
                     width: entry.width || rect.width,
@@ -3600,9 +3700,14 @@ ${shader.fragmentShader}`
                     }
                 }
                 applyPageElement(entry);
-                setSelectedPageElement(entry.id);
+                if (pageElementX) pageElementX.value = Math.round(entry.x || 0);
+                if (pageElementY) pageElementY.value = Math.round(entry.y || 0);
+                if (pageElementWidth) pageElementWidth.value = Math.round(entry.width || 0);
+                if (pageElementHeight) pageElementHeight.value = Math.round(entry.height || 0);
+                renderPageEditorFrames();
             });
             frame.addEventListener("pointerup", () => {
+                if (pageEditorDrag?.id === entry.id) pushPageAction(entry, pageEditorDrag.before, snapshotPageElement(entry), pageEditorDrag.handle === "move" ? "Move page element" : "Resize page element");
                 pageEditorDrag = null;
             });
             document.body.appendChild(frame);
@@ -3611,17 +3716,30 @@ ${shader.fragmentShader}`
 
         function renderPageEditorFrames() {
             if (!pageEditorActive) return;
+            let firstVisibleId = "";
             pageElements.forEach((entry) => {
                 const frame = pageEditorFrames.get(entry.id) || makePageEditorFrame(entry);
                 pageEditorFrames.set(entry.id, frame);
                 const rect = entry.element.getBoundingClientRect();
+                const alpha = alphaForPageTimeline(entry.timeline, 0.055, 0.025);
+                const computedTransform = getComputedStyle(entry.element).transform;
                 frame.classList.toggle("active", entry.id === selectedPageElementId);
                 frame.style.left = `${rect.left}px`;
                 frame.style.top = `${rect.top}px`;
                 frame.style.width = `${rect.width}px`;
                 frame.style.height = `${rect.height}px`;
-                frame.style.display = rect.width < 8 || rect.height < 8 || rect.bottom < 0 || rect.top > window.innerHeight ? "none" : "block";
+                frame.style.transform = computedTransform && computedTransform !== "none" ? computedTransform : "";
+                frame.style.transformOrigin = getComputedStyle(entry.element).transformOrigin || "center center";
+                const visible = !(alpha < 0.08 || rect.width < 8 || rect.height < 8 || rect.bottom < 0 || rect.top > window.innerHeight);
+                frame.style.display = visible ? "block" : "none";
+                if (visible && !firstVisibleId) firstVisibleId = entry.id;
             });
+            const selectedFrame = pageEditorFrames.get(selectedPageElementId);
+            if (!repairingPageSelection && firstVisibleId && selectedFrame && selectedFrame.style.display === "none") {
+                repairingPageSelection = true;
+                setSelectedPageElement(firstVisibleId);
+                repairingPageSelection = false;
+            }
         }
 
         function clearPageEditorFrames() {
@@ -3638,13 +3756,10 @@ ${shader.fragmentShader}`
                 setSceneMode(false);
                 setSettingsOpen(false);
                 discoverPageElements();
-                const firstVisible = [...pageElements.values()].find((entry) => {
-                    const rect = entry.element.getBoundingClientRect();
-                    return rect.width > 8 && rect.height > 8 && rect.bottom > 0 && rect.top < window.innerHeight;
-                });
-                setSelectedPageElement(firstVisible?.id || selectedPageElementId || pageElements.keys().next().value);
                 renderPageTimeline();
                 renderPageEditorFrames();
+                const visibleFrame = [...pageEditorFrames.values()].find((frame) => getComputedStyle(frame).display !== "none");
+                setSelectedPageElement(visibleFrame?.dataset.pageFrame || selectedPageElementId || pageElements.keys().next().value);
             } else {
                 clearPageEditorFrames();
             }
@@ -3696,6 +3811,17 @@ ${shader.fragmentShader}`
             return smootherstep(clamp(1 - (delta - 0.34) / 0.16));
         }
 
+        function currentPageTimeline() {
+            return clamp((window.scrollY || 0) / maxPageScroll());
+        }
+
+        function alphaForPageTimeline(timeline, radius = 0.052, feather = 0.035) {
+            const distance = Math.abs(currentPageTimeline() - Number(timeline || 0));
+            if (distance <= radius) return 1;
+            if (distance >= radius + feather) return 0;
+            return smootherstep(clamp(1 - (distance - radius) / feather));
+        }
+
         function particleAlphaForProject(index) {
             const delta = Math.abs(projectionFloat - index);
             if (delta <= 0.32) return 1;
@@ -3733,8 +3859,10 @@ ${shader.fragmentShader}`
 
         function updateProjectCards() {
             projectCards.forEach((card, index) => {
-                const delta = projectionFloat - index;
-                const alpha = alphaForProject(index);
+                const entry = pageElements.get(card.dataset.pageElement);
+                const timelineAlpha = entry ? alphaForPageTimeline(entry.timeline, 0.045, 0.032) : alphaForProject(index);
+                const delta = entry ? (currentPageTimeline() - entry.timeline) * 15 : projectionFloat - index;
+                const alpha = timelineAlpha;
                 const y = delta * -118;
                 card.style.setProperty("--panel-opacity", alpha.toFixed(3));
                 card.style.setProperty("--panel-y", `${y.toFixed(1)}px`);
@@ -3742,6 +3870,15 @@ ${shader.fragmentShader}`
                 card.style.setProperty("--card-tilt-y", `${(pointerCurrent.x * 5.2).toFixed(2)}deg`);
                 card.style.visibility = alpha > 0.025 ? "visible" : "hidden";
                 card.classList.toggle("active", alpha > 0.55);
+            });
+            pageElements.forEach((entry) => {
+                if (!entry.custom || !entry.element) return;
+                const alpha = alphaForPageTimeline(entry.timeline, 0.045, 0.032);
+                const delta = (currentPageTimeline() - entry.timeline) * 15;
+                entry.element.style.setProperty("--panel-opacity", alpha.toFixed(3));
+                entry.element.style.setProperty("--panel-y", `${(delta * -118).toFixed(1)}px`);
+                entry.element.style.visibility = alpha > 0.025 ? "visible" : "hidden";
+                entry.element.classList.toggle("active", alpha > 0.55);
             });
         }
 
@@ -3758,9 +3895,12 @@ ${shader.fragmentShader}`
             projectionExitProgress = smoothstep(clamp((y - (sectionTop + projectViewer.offsetHeight - vh * 1.04)) / (vh * 0.78)));
             const videoOpacity = sceneMode ? 0.12 : clamp(1 - y / (vh * 0.9));
             const projectionEntryProgress = smootherstep(clamp((y - vh * 0.32) / (vh * 0.92)));
+            const about = document.querySelector("#about");
+            const aboutTop = about ? y + about.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
+            const aboutFade = smootherstep(clamp((y - aboutTop + vh * 0.72) / (vh * 1.05)));
             const environmentOpacity = sceneMode
                 ? 1
-                : projectionEntryProgress;
+                : projectionEntryProgress * (1 - aboutFade);
             const heroTitleOpacity = clamp(1 - y / (vh * 0.68));
             const titleOpacity = sceneMode ? heroTitleOpacity * 0.18 : heroTitleOpacity;
             const navOpacity = sceneMode || y > vh * 0.86 ? 0 : clamp(1 - y / (vh * 0.42), 0, 1);
@@ -3795,15 +3935,16 @@ ${shader.fragmentShader}`
             const top = scrollY + rect.top;
             const scrollable = Math.max(about.offsetHeight - vh, 1);
             const progress = clamp((scrollY - top) / scrollable);
-            const fade = smootherstep(clamp((scrollY - top + vh * 0.42) / (vh * 0.86)));
+            const fade = smootherstep(clamp((scrollY - top + vh * 0.72) / (vh * 1.05)));
             document.documentElement.style.setProperty("--about-video-opacity", fade.toFixed(3));
             [0, 1, 2].forEach((index) => {
                 const center = 0.18 + index * 0.31;
                 const distance = Math.abs(progress - center);
-                const opacity = clamp(1 - distance / 0.18);
+                const entry = pageElements.get(`about-${index}`);
+                const opacity = entry ? alphaForPageTimeline(entry.timeline, 0.016, 0.018) : clamp(1 - distance / 0.18);
                 const eased = smootherstep(opacity);
                 document.documentElement.style.setProperty(`--about-panel-${index}-opacity`, eased.toFixed(3));
-                document.documentElement.style.setProperty(`--about-panel-${index}-y`, `${((1 - eased) * 42).toFixed(1)}px`);
+                document.documentElement.style.setProperty(`--about-panel-${index}-y`, `${(18 + (1 - eased) * 36).toFixed(1)}px`);
             });
             if (aboutVideo) {
                 aboutVideo.playbackRate = 0.35 + smootherstep(progress) * 2.15;
@@ -4088,15 +4229,17 @@ ${shader.fragmentShader}`
         }
 
         let appliedQualityPreset = "";
+        let appliedRugProfileKey = "";
         function applyQualityPreset() {
             const quality = effectiveQualityPreset();
-            const flowDrawCount = quality === "low" ? Math.floor(flowCount * 0.32) : quality === "medium" ? Math.floor(flowCount * 0.62) : quality === "high" ? Math.floor(flowCount * 0.84) : flowCount;
+            const particleScale = Number(visualSettings.performanceParticles ?? 1);
+            const flowDrawCount = Math.floor((quality === "low" ? flowCount * 0.32 : quality === "medium" ? flowCount * 0.62 : quality === "high" ? flowCount * 0.84 : flowCount) * particleScale);
             flowGeometry.setDrawRange(0, flowDrawCount);
             assetObjects.forEach((object) => {
                 const cloud = object.userData?.shapeCloud;
                 if (!cloud) return;
                 const count = cloud.geometry.attributes.position.count;
-                const factor = quality === "low" ? 0.34 : quality === "medium" ? 0.64 : quality === "high" ? 0.82 : 1;
+                const factor = (quality === "low" ? 0.34 : quality === "medium" ? 0.64 : quality === "high" ? 0.82 : 1) * particleScale;
                 cloud.geometry.setDrawRange(0, Math.max(80, Math.floor(count * factor)));
             });
             if (bloomPass) {
@@ -4122,12 +4265,17 @@ ${shader.fragmentShader}`
             }
             renderer.setPixelRatio(preferredPixelRatio());
             composer?.setPixelRatio(preferredPixelRatio());
-            if (appliedQualityPreset !== quality) {
+            const rugProfile = carpetQualityProfile();
+            const rugProfileKey = `${quality}:${visualSettings.performanceRugDetail}:${rugProfile.segX}:${rugProfile.segZ}:${rugProfile.fringes}`;
+            if (appliedRugProfileKey !== rugProfileKey) {
                 const rug = assetObjects.get("rug");
                 if (rug?.userData?.carpet) {
-                    rug.userData.carpet.carpetQuality = carpetQualityProfile();
+                    rug.userData.carpet.carpetQuality = rugProfile;
                     rebuildFlyingCarpetFringes(rug);
                 }
+                appliedRugProfileKey = rugProfileKey;
+            }
+            if (appliedQualityPreset !== quality) {
                 const source = animationVideoSource(animationVideos[currentAnimationIndex] || animationVideos[0]);
                 projectionVideoSource = source;
                 transitionVideoSource = source;
@@ -4194,9 +4342,12 @@ ${shader.fragmentShader}`
             lensDisplacement?.setAttribute("scale", visualSettings.lensDisplacement * visualSettings.lensWarpRadius);
             scene.environment = visualSettings.globalIllumination ? roomEnvironmentTexture : null;
             ambientLight.intensity = visualSettings.globalIllumination ? 0.72 : 0.28;
-            keyLight.intensity = visualSettings.topLight;
+            const lightingScale = Number(visualSettings.performanceLighting ?? 1);
+            keyLight.intensity = visualSettings.topLight * lightingScale;
             grid.visible = visualSettings.gridVisible;
             floorPlane.visible = visualSettings.solidFloor;
+            keyLight.castShadow = Boolean(visualSettings.performanceShadows);
+            renderer.shadowMap.enabled = Boolean(visualSettings.performanceShadows);
             floorMaterial.color.set(visualSettings.floorColor);
             renderer.setClearColor(new THREE.Color(visualSettings.backgroundColor), visualSettings.backgroundAlpha * currentEnvironmentOpacity);
             document.querySelector(".projection-copy-shell")?.style.setProperty("width", `min(${visualSettings.projectTextWidth}px, 92vw)`);
@@ -4543,7 +4694,7 @@ ${shader.fragmentShader}`
         function updateAmbientParticles(elapsed) {
             const quality = effectiveQualityPreset();
             const qualityCap = quality === "low" ? 280 : quality === "medium" ? 560 : quality === "high" ? 800 : ambientParticleCount;
-            const drawCount = Math.min(ambientParticleCount, qualityCap, Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
+            const drawCount = Math.min(ambientParticleCount, Math.floor(qualityCap * Number(visualSettings.performanceParticles ?? 1)), Math.max(0, Math.floor(visualSettings.ambientParticleAmount)));
             ambientParticleGeometry.setDrawRange(0, drawCount);
             ambientParticles.visible = drawCount > 0 && currentEnvironmentOpacity > 0.06;
             ambientParticleMaterial.size = visualSettings.ambientParticleSize;
@@ -5020,10 +5171,12 @@ ${shader.fragmentShader}`
 
         pageEditorCloseBtn?.addEventListener("click", () => setPageEditorMode(false));
         pageElementSelect?.addEventListener("change", () => setSelectedPageElement(pageElementSelect.value));
-        const updateSelectedPageElementFromInputs = () => {
+        const updateSelectedPageElementFromInputs = (event) => {
             const entry = pageElements.get(selectedPageElementId);
             if (!entry) return;
-            entry.timeline = Number(pageElementTimeline?.value ?? entry.timeline);
+            if (pageElementName) entry.label = pageElementName.value || entry.label;
+            const timelineSource = event?.target === pageElementTimelineNumber ? pageElementTimelineNumber : pageElementTimeline;
+            entry.timeline = Number(timelineSource?.value ?? entry.timeline);
             entry.x = Number(pageElementX?.value ?? entry.x);
             entry.y = Number(pageElementY?.value ?? entry.y);
             entry.width = Number(pageElementWidth?.value ?? entry.width);
@@ -5034,21 +5187,35 @@ ${shader.fragmentShader}`
             if (pageElementText) writePageElementText(entry, pageElementText.value);
             applyPageElement(entry);
             setSelectedPageElement(entry.id);
+            updateProjectCards();
+            updateAboutScroll(window.scrollY || 0, Math.max(window.innerHeight, 1));
         };
-        [pageElementTimeline, pageElementX, pageElementY, pageElementWidth, pageElementHeight, pageElementOpacity, pageElementFont, pageElementColor].forEach((input) => {
+        const pageEditorInputs = [pageElementName, pageElementTimeline, pageElementTimelineNumber, pageElementX, pageElementY, pageElementWidth, pageElementHeight, pageElementOpacity, pageElementFont, pageElementColor, pageElementText];
+        pageEditorInputs.forEach((input) => {
+            input?.addEventListener("focusin", () => {
+                const entry = pageElements.get(selectedPageElementId);
+                pageInputBefore = snapshotPageElement(entry);
+            });
             input?.addEventListener("input", updateSelectedPageElementFromInputs);
+            input?.addEventListener("change", () => {
+                const entry = pageElements.get(selectedPageElementId);
+                pushPageAction(entry, pageInputBefore, snapshotPageElement(entry), "Edit page element");
+                pageInputBefore = null;
+            });
         });
-        pageElementText?.addEventListener("input", updateSelectedPageElementFromInputs);
         pageAddTextBtn?.addEventListener("click", () => {
             const entry = createPageTextElement({ timeline: clamp(window.scrollY / maxPageScroll()), text: "New text element" });
             discoverPageElements();
             setSelectedPageElement(entry.id);
             renderPageTimeline();
             renderPageEditorFrames();
+            actionStack.push({ type: "page-add", id: entry.id, snapshot: snapshotPageElement(entry), label: "Add page text element" });
+            redoStack.length = 0;
         });
         pageResetElementBtn?.addEventListener("click", () => {
             const entry = pageElements.get(selectedPageElementId);
             if (!entry) return;
+            const before = snapshotPageElement(entry);
             entry.x = 0;
             entry.y = 0;
             entry.opacity = 1;
@@ -5059,6 +5226,7 @@ ${shader.fragmentShader}`
             entry.height = Math.round(rect.height);
             applyPageElement(entry);
             setSelectedPageElement(entry.id);
+            pushPageAction(entry, before, snapshotPageElement(entry), "Reset page element");
         });
         pageSaveConfigBtn?.addEventListener("click", () => {
             localStorage.setItem("pouya-ai-page-editor-config", JSON.stringify(serializePageConfig()));

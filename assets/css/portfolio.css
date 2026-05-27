@@ -685,6 +685,18 @@
             resize: vertical;
         }
 
+        .paired-inputs {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .paired-inputs .hud-input {
+            width: 100%;
+            min-width: 0;
+        }
+
         .page-editor-frame {
             position: fixed;
             z-index: 70;
@@ -1024,6 +1036,11 @@
             box-shadow: none;
         }
 
+        .projection-panel:not(.glass-plane-enabled) .project-link,
+        .projection-panel:not(.glass-plane-enabled) .liquid-action {
+            box-shadow: none;
+        }
+
         .projection-panel:not(.glass-plane-enabled)::before,
         .projection-panel:not(.glass-plane-enabled)::after {
             display: none;
@@ -1103,6 +1120,15 @@
             gap: 10px;
         }
 
+        .project-actions .liquid-action {
+            width: fit-content;
+            min-width: 0;
+            min-height: 0;
+            height: auto;
+            padding-block: 0.76em;
+            line-height: 1;
+        }
+
         .liquid-action.icon-action {
             width: 58px;
             min-width: 58px;
@@ -1116,14 +1142,51 @@
             margin-inline: -1px;
         }
 
-        .liquid-action.icon-action .flip-left,
-        .liquid-action.icon-action .flip-right {
-            font-size: 20px;
-            transform: scale(1.08);
+        .hourglass-flip-action {
+            gap: 3px;
         }
 
-        .liquid-action.icon-action .flip-left {
-            transform: scaleX(-1) scale(1.08);
+        .hourglass-flip-action .flip-arc {
+            position: relative;
+            width: 15px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        .hourglass-flip-action .flip-arc::before {
+            content: "";
+            position: absolute;
+            inset: 3px 0;
+            border: 2px solid rgba(255, 255, 255, 0.86);
+            border-right: 0;
+            border-radius: 999px 0 0 999px;
+        }
+
+        .hourglass-flip-action .flip-arc::after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        .hourglass-flip-action .flip-left::after {
+            left: 0;
+            bottom: 2px;
+            border-right: 6px solid rgba(255, 255, 255, 0.9);
+            transform: rotate(-35deg);
+        }
+
+        .hourglass-flip-action .flip-right {
+            transform: scaleX(-1);
+        }
+
+        .hourglass-flip-action .flip-right::after {
+            left: 0;
+            top: 2px;
+            border-right: 6px solid rgba(255, 255, 255, 0.9);
+            transform: rotate(35deg);
         }
 
         .liquid-action {
@@ -1238,8 +1301,8 @@
             margin-top: -92svh;
             display: grid;
             align-content: start;
-            gap: 34svh;
-            padding: 14svh max(1.25rem, 5vw) 22svh;
+            gap: 30svh;
+            padding: 28svh max(1.25rem, 5vw) 22svh;
         }
 
         .about-panel {
@@ -1304,9 +1367,11 @@
             opacity: 0;
             pointer-events: none;
             transform: translate(-50%, 16px);
+            display: none;
         }
 
         body.page-editor-active .page-timeline-dock {
+            display: block;
             opacity: 1;
             pointer-events: auto;
             transform: translate(-50%, 0);
@@ -1366,21 +1431,22 @@
         .page-timeline-chip {
             position: absolute;
             top: 50%;
-            min-width: 54px;
-            height: 18px;
-            padding: 0 7px;
+            width: 20px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0;
             border-radius: 999px;
             transform: translate(-50%, -50%);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            background: rgba(5, 9, 14, 0.82);
+            background: var(--chip-color, rgba(5, 9, 14, 0.82));
             color: rgba(255, 255, 255, 0.82);
             font-size: 9px;
             font-weight: 850;
             text-transform: uppercase;
             cursor: grab;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: center;
+            line-height: 18px;
+            box-shadow: 0 0 14px color-mix(in srgb, var(--chip-color, rgba(97, 245, 255, 0.7)) 60%, transparent);
         }
 
         .page-timeline-chip.active {
@@ -1507,6 +1573,7 @@
 
             .project-copy {
                 line-height: 1.55;
+                color: rgba(255, 255, 255, 0.92);
             }
 
             .about-panel {
@@ -1514,6 +1581,7 @@
                 -webkit-backdrop-filter: none;
                 backdrop-filter: none;
                 box-shadow: none;
+                color: rgba(255, 255, 255, 0.92);
             }
 
             .about-panel::before,
