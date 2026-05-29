@@ -2857,7 +2857,8 @@ ${shader.fragmentShader}`
         }
 
         function maybeUnlockDevFromMobileCorners(event) {
-            if (devModeEnabled || !window.matchMedia("(pointer: coarse)").matches) return false;
+            const mobilePointer = window.matchMedia("(pointer: coarse)").matches || event.pointerType === "touch";
+            if (devModeEnabled || !mobilePointer) return false;
             const margin = Math.min(96, Math.max(44, window.innerWidth * 0.16));
             const x = event.clientX;
             const y = event.clientY;
@@ -2885,8 +2886,6 @@ ${shader.fragmentShader}`
         function onPointerDown(event) {
             if (maybeUnlockDevFromMobileCorners(event)) return;
             if (objectInteractionsEnabled() && !sceneMode && currentEnvironmentOpacity > 0.2 && !event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock, #page-editor-panel, #page-timeline-dock, .page-editor-frame")) {
-                const carpetHit = pickFlyingCarpet(event);
-                if (carpetHit && startFlyingCarpetDrag(event, carpetHit)) return;
                 const hit = pickInteractiveProjection(event);
                 if (hit) {
                     event.preventDefault();
@@ -2908,7 +2907,10 @@ ${shader.fragmentShader}`
                         grabMovePlane.setFromNormalAndCoplanarPoint(normal, hit.getWorldPosition(new THREE.Vector3()));
                     }
                     document.body.style.cursor = "grabbing";
+                    return;
                 }
+                const carpetHit = pickFlyingCarpet(event);
+                if (carpetHit && startFlyingCarpetDrag(event, carpetHit)) return;
                 return;
             }
             if (!sceneMode || event.target !== renderer.domElement) return;
@@ -3636,6 +3638,7 @@ ${shader.fragmentShader}`
                 else if (!element.dataset.pageEditorTimeline && id === "hero-subtitle") timeline = 0.056;
                 else if (!element.dataset.pageEditorTimeline && id === "footer") timeline = 0.985;
                 const rect = element.getBoundingClientRect();
+                const wrapHeight = element.dataset.pageEditorWrapHeight === "1" && !element.dataset.pageEditorHeight;
                 const entry = {
                     id,
                     label: element.dataset.pageEditorLabel || pageElementLabel(element, id),
@@ -3644,7 +3647,7 @@ ${shader.fragmentShader}`
                     x: Number(element.dataset.pageEditorX || 0),
                     y: Number(element.dataset.pageEditorY || 0),
                     width: Number(element.dataset.pageEditorWidth || Math.round(rect.width || 320)),
-                    height: Number(element.dataset.pageEditorHeight || Math.round(rect.height || 120)),
+                    height: wrapHeight ? 0 : Number(element.dataset.pageEditorHeight || Math.round(rect.height || 120)),
                     opacity: Number(element.dataset.pageEditorOpacity || 1),
                     font: element.dataset.pageEditorFont || "",
                     color: element.dataset.pageEditorColor || "#ffffff",
@@ -3677,6 +3680,7 @@ ${shader.fragmentShader}`
                 entry.element.style.setProperty("--page-editor-width", `${entry.width}px`);
             }
             if (entry.height) entry.element.style.minHeight = `${entry.height}px`;
+            else if (entry.element.dataset.pageEditorWrapHeight === "1") entry.element.style.minHeight = "0";
             if (entry.color) {
                 entry.element.style.color = entry.color;
                 entry.element.querySelectorAll?.(".project-title, .project-copy, .project-link, p").forEach((child) => {
@@ -3864,21 +3868,24 @@ ${shader.fragmentShader}`
                 chip.addEventListener("click", () => setSelectedPageElement(entry.id));
                 chip.addEventListener("pointerdown", (event) => {
                     event.preventDefault();
+                    event.stopPropagation();
                     setSelectedPageElement(entry.id);
                     const before = snapshotPageElement(entry);
                     chip.setPointerCapture(event.pointerId);
-                    const rect = pageTimelineTrack.getBoundingClientRect();
                     const onMove = (moveEvent) => {
-                        entry.timeline = clamp((moveEvent.clientX - rect.left) / Math.max(rect.width, 1));
+                        entry.timeline = progressFromTimelineEvent(moveEvent, pageTimelineTrack);
                         persistPageElement(entry);
                         chip.style.left = `${entry.timeline * 100}%`;
-                        setSelectedPageElement(entry.id);
+                        syncSelectedPageTimelineInputs(entry);
                         updateProjectCards();
+                        updateAboutScroll(window.scrollY || 0, Math.max(window.innerHeight, 1));
+                        renderPageEditorFrames();
                     };
                     const onUp = () => {
                         chip.removeEventListener("pointermove", onMove);
                         chip.removeEventListener("pointerup", onUp);
-                        pushPageAction(entry, before, snapshotPageElement(entry), "Move page timeline tac");
+                        pushPageAction(entry, before, snapshotPageElement(entry), "Move page timeline marker");
+                        setSelectedPageElement(entry.id);
                     };
                     chip.addEventListener("pointermove", onMove);
                     chip.addEventListener("pointerup", onUp);
@@ -4049,6 +4056,38 @@ ${shader.fragmentShader}`
             return clamp((window.scrollY || 0) / maxPageScroll());
         }
 
+        function progressFromTimelineEvent(event, track) {
+            const rect = track.getBoundingClientRect();
+            return clamp((event.clientX - rect.left) / Math.max(rect.width, 1));
+        }
+
+        function syncSelectedPageTimelineInputs(entry) {
+            if (!entry || entry.id !== selectedPageElementId) return;
+            const value = entry.timeline.toFixed(3);
+            if (pageElementTimeline) pageElementTimeline.value = value;
+            if (pageElementTimelineValue) pageElementTimelineValue.textContent = value;
+            if (pageElementTimelineNumber) pageElementTimelineNumber.value = value;
+        }
+
+        function setCameraTimelineProgress(progress, previewRig = cameraThirdPerson) {
+            const t = clamp(progress);
+            cameraPlaying = false;
+            if (scrollSyncToggle?.checked) scrollSyncToggle.checked = false;
+            if (cameraTimeline) cameraTimeline.value = t.toFixed(3);
+            document.documentElement.style.setProperty("--timeline-progress", t.toFixed(3));
+            applyCameraAnimation(t, true, previewRig);
+            return t;
+        }
+
+        function setPageTimelineProgress(progress) {
+            const t = clamp(progress);
+            document.documentElement.style.setProperty("--page-timeline-progress", t.toFixed(3));
+            window.scrollTo({ top: t * maxPageScroll(), behavior: "auto" });
+            updateScrollState();
+            renderPageEditorFrames();
+            return t;
+        }
+
         function alphaForPageTimeline(timeline, radius = 0.052, feather = 0.035) {
             const distance = Math.abs(currentPageTimeline() - Number(timeline || 0));
             if (distance <= radius) return 1;
@@ -4149,8 +4188,7 @@ ${shader.fragmentShader}`
             document.documentElement.style.setProperty("--projection-progress", currentProjectionProgress.toFixed(3));
             document.documentElement.style.setProperty("--timeline-progress", currentProjectionProgress.toFixed(3));
             pageTimelineTrack?.style.setProperty("--page-progress", (y / maxPageScroll()).toFixed(3));
-            const pagePlayhead = document.querySelector("#page-timeline-playhead");
-            if (pagePlayhead) pagePlayhead.style.left = `${clamp(y / maxPageScroll()) * 100}%`;
+            document.documentElement.style.setProperty("--page-timeline-progress", clamp(y / maxPageScroll()).toFixed(3));
             document.documentElement.style.setProperty("--geo-panel-opacity", alphaForProject(0).toFixed(3));
             document.documentElement.style.setProperty("--iran-panel-opacity", alphaForProject(1).toFixed(3));
             if (titleFallback && !document.body.classList.contains("title-loaded")) {
@@ -4692,8 +4730,7 @@ ${shader.fragmentShader}`
                 const [selectBtn, setBtn, deleteBtn] = row.querySelectorAll("button");
                 selectBtn.addEventListener("click", () => {
                     selectedCameraKeyframe = index;
-                    cameraTimeline.value = keyframe.time;
-                    applyCameraAnimation(keyframe.time, true, cameraThirdPerson);
+                    setCameraTimelineProgress(keyframe.time);
                     renderCameraKeyframes();
                 });
                 setBtn.addEventListener("click", () => updateSelectedCameraKeyframe(index));
@@ -4720,21 +4757,19 @@ ${shader.fragmentShader}`
                 marker.title = `Keyframe ${index + 1}: ${keyframe.project || "free"}`;
                 marker.addEventListener("click", () => {
                     selectedCameraKeyframe = index;
-                    cameraTimeline.value = keyframe.time;
-                    applyCameraAnimation(keyframe.time, true, cameraThirdPerson);
+                    setCameraTimelineProgress(keyframe.time);
                     renderCameraKeyframes();
                 });
                 marker.addEventListener("pointerdown", (event) => {
                     event.preventDefault();
+                    event.stopPropagation();
                     selectedCameraKeyframe = index;
                     marker.setPointerCapture(event.pointerId);
-                    const rect = timelineTrack.getBoundingClientRect();
                     const onMove = (moveEvent) => {
-                        const t = clamp((moveEvent.clientX - rect.left) / Math.max(rect.width, 1));
+                        const t = progressFromTimelineEvent(moveEvent, timelineTrack);
                         keyframe.time = t;
-                        cameraTimeline.value = t.toFixed(3);
                         marker.style.left = `${t * 100}%`;
-                        applyCameraAnimation(t, true, cameraThirdPerson);
+                        setCameraTimelineProgress(t);
                     };
                     const onUp = () => {
                         marker.removeEventListener("pointermove", onMove);
@@ -5363,22 +5398,46 @@ ${shader.fragmentShader}`
             setStatus("Camera playback paused.");
         });
         cameraTimeline.addEventListener("input", () => {
-            cameraPlaying = false;
-            const t = Number(cameraTimeline.value);
-            document.documentElement.style.setProperty("--timeline-progress", t.toFixed(3));
-            applyCameraAnimation(t, true, cameraThirdPerson);
+            setCameraTimelineProgress(Number(cameraTimeline.value));
         });
         cameraUpdateKeyframeBtn.addEventListener("click", () => updateSelectedCameraKeyframe());
         timelineExpandBtn?.addEventListener("click", () => cameraTimelineDock?.classList.toggle("expanded"));
         timelineAddKeyframeBtn?.addEventListener("click", addCameraKeyframe);
         timelineTrack?.addEventListener("click", (event) => {
-            if (event.target.classList.contains("timeline-marker")) return;
-            const rect = timelineTrack.getBoundingClientRect();
-            const t = clamp((event.clientX - rect.left) / Math.max(rect.width, 1));
-            cameraTimeline.value = t.toFixed(3);
-            cameraPlaying = false;
-            applyCameraAnimation(t, true, cameraThirdPerson);
-            document.documentElement.style.setProperty("--timeline-progress", t.toFixed(3));
+            if (event.target.closest?.(".timeline-marker, .timeline-playhead, button")) return;
+            setCameraTimelineProgress(progressFromTimelineEvent(event, timelineTrack));
+        });
+        timelineTrack?.querySelector(".timeline-playhead")?.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const playhead = event.currentTarget;
+            playhead.setPointerCapture(event.pointerId);
+            const onMove = (moveEvent) => setCameraTimelineProgress(progressFromTimelineEvent(moveEvent, timelineTrack));
+            const onUp = () => {
+                playhead.removeEventListener("pointermove", onMove);
+                playhead.removeEventListener("pointerup", onUp);
+            };
+            onMove(event);
+            playhead.addEventListener("pointermove", onMove);
+            playhead.addEventListener("pointerup", onUp);
+        });
+        pageTimelineTrack?.addEventListener("click", (event) => {
+            if (event.target.closest?.(".page-timeline-chip, .timeline-playhead, button")) return;
+            setPageTimelineProgress(progressFromTimelineEvent(event, pageTimelineTrack));
+        });
+        pageTimelineTrack?.querySelector(".timeline-playhead")?.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const playhead = event.currentTarget;
+            playhead.setPointerCapture(event.pointerId);
+            const onMove = (moveEvent) => setPageTimelineProgress(progressFromTimelineEvent(moveEvent, pageTimelineTrack));
+            const onUp = () => {
+                playhead.removeEventListener("pointermove", onMove);
+                playhead.removeEventListener("pointerup", onUp);
+            };
+            onMove(event);
+            playhead.addEventListener("pointermove", onMove);
+            playhead.addEventListener("pointerup", onUp);
         });
         cameraThirdPersonBtn.addEventListener("click", () => {
             cameraThirdPerson = !cameraThirdPerson;
@@ -5482,13 +5541,13 @@ ${shader.fragmentShader}`
             if (!entry) return;
             const before = snapshotPageElement(entry);
             entry.x = 0;
-            entry.y = 0;
+            entry.y = Number(entry.element.dataset.pageEditorY || 0);
             entry.opacity = 1;
             entry.font = "";
             entry.color = "#ffffff";
             const rect = entry.element.getBoundingClientRect();
             entry.width = Math.round(rect.width);
-            entry.height = Math.round(rect.height);
+            entry.height = entry.element.dataset.pageEditorWrapHeight === "1" ? 0 : Math.round(rect.height);
             applyPageElement(entry);
             setSelectedPageElement(entry.id);
             pushPageAction(entry, before, snapshotPageElement(entry), "Reset page element");
