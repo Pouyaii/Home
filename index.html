@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="assets/css/tailwind.css">
-    <link rel="stylesheet" href="assets/css/portfolio.css?v=20260523g">
+    <link rel="stylesheet" href="assets/css/portfolio.css?v=20260529b">
 </head>
 <body>
     <svg class="liquid-defs" aria-hidden="true">
@@ -172,6 +172,7 @@
                     <label for="setting-quality-preset-main">Quality</label>
                     <select id="setting-quality-preset-main" class="hud-select live-setting" data-setting="qualityPreset">
                         <option value="auto" selected>Auto</option>
+                        <option value="lowest">Lowest</option>
                         <option value="low">Battery</option>
                         <option value="medium">Balanced</option>
                         <option value="high">Beautiful</option>
@@ -293,6 +294,7 @@
                     <label for="setting-quality-preset">Quality</label>
                     <select id="setting-quality-preset" class="hud-select live-setting" data-setting="qualityPreset">
                         <option value="auto" selected>Auto</option>
+                        <option value="lowest">Lowest</option>
                         <option value="low">Battery</option>
                         <option value="medium">Balanced</option>
                         <option value="high">Beautiful</option>
@@ -647,7 +649,7 @@
         </section>
 
         <section id="about" class="content-band about-scroll-band">
-            <video id="about-blackhole-video" class="about-background-video" muted playsinline loop preload="auto" poster="assets/media/blackholes-poster.jpg">
+            <video id="about-blackhole-video" class="about-background-video" muted playsinline loop preload="none" poster="assets/media/blackholes-poster.jpg">
                 <source src="assets/media/blackholes-1080p.mp4" media="(min-width: 900px)" type="video/mp4">
                 <source src="assets/media/blackholes-720p.mp4" type="video/mp4">
             </video>
@@ -751,9 +753,12 @@
             const profiles = useNonOrbit ? videoProfiles.nonOrbit : videoProfiles.orbit;
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const saveData = Boolean(connection && connection.saveData);
+            const storedQuality = localStorage.getItem("pouya-ai-quality-preset");
+            const queryQuality = new URLSearchParams(window.location.search).get("quality");
             const viewportScore = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
             const deviceMemory = navigator.deviceMemory || 8;
             const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+            if (storedQuality === "lowest" || queryQuality === "lowest") return profiles.small;
             if (saveData || coarsePointer || deviceMemory <= 3 || viewportScore < 1100) return profiles.small;
             if (deviceMemory <= 5 || viewportScore < 2300) return profiles.medium;
             return profiles.large;
@@ -860,8 +865,22 @@
         installLiquidGlassMaps();
         loadAdaptiveVideo();
         window.addEventListener("pouya:blackhole-video-change", loadAdaptiveVideo);
-        window.addEventListener("resize", loadAdaptiveVideo);
-        window.addEventListener("pointermove", updateBlackholeLens, { passive: true });
+        let adaptiveVideoResizeTimer = 0;
+        window.addEventListener("resize", () => {
+            window.clearTimeout(adaptiveVideoResizeTimer);
+            adaptiveVideoResizeTimer = window.setTimeout(loadAdaptiveVideo, 180);
+        });
+        let lensRaf = 0;
+        let latestLensEvent = null;
+        window.addEventListener("pointermove", (event) => {
+            if (document.body.classList.contains("lowest-quality")) return;
+            latestLensEvent = event;
+            if (lensRaf) return;
+            lensRaf = requestAnimationFrame(() => {
+                lensRaf = 0;
+                if (latestLensEvent) updateBlackholeLens(latestLensEvent);
+            });
+        }, { passive: true });
         window.addEventListener("scroll", () => {
             if (window.scrollY > window.innerHeight * 0.82) {
                 document.documentElement.style.setProperty("--lens-opacity", "0");
@@ -869,6 +888,6 @@
         }, { passive: true });
     </script>
 
-    <script type="module" src="assets/js/portfolio-scene.js?v=20260523j"></script>
+    <script type="module" src="assets/js/portfolio-scene.js?v=20260529b"></script>
 </body>
 </html>

@@ -77,6 +77,32 @@
             overflow: auto;
         }
 
+        body.lowest-quality {
+            --lens-opacity: 0;
+            --lens-user-opacity: 0;
+            --glass-blur: 0px;
+            --glass-saturation: 1;
+            --glass-highlight-alpha: 0.35;
+            --glass-glare-alpha: 0.04;
+        }
+
+        body.lowest-quality .liquid-lens {
+            display: none;
+        }
+
+        body.lowest-quality .liquid-glass,
+        body.lowest-quality .projection-panel,
+        body.lowest-quality .about-panel {
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        body.lowest-quality #projection-video-controls,
+        body.lowest-quality .scene-wash {
+            display: none;
+        }
+
         ::selection {
             background: rgba(94, 161, 255, 0.9);
             color: #fff;
@@ -190,6 +216,13 @@
             opacity: 0;
             pointer-events: none;
             transform: translateY(12px);
+        }
+
+        body:not(.dev-mode-enabled) #scene-hud,
+        body:not(.dev-mode-enabled) .camera-timeline-dock,
+        body:not(.dev-mode-enabled) .page-editor-panel,
+        body:not(.dev-mode-enabled) .page-timeline-dock {
+            display: none;
         }
 
         body.page-editor-active .projection-panel,
