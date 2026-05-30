@@ -98,13 +98,18 @@
         const smoothstep = (t) => t * t * (3 - 2 * t);
         const smootherstep = (t) => t * t * t * (t * (t * 6 - 15) + 10);
         const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const qualityPresetOptions = new Set(["auto", "lowest", "low", "medium", "high", "cinematic"]);
+        const qualityPresetOptions = new Set(["auto", "low", "medium", "high", "cinematic"]);
+        const qualityDowngradeOrder = ["cinematic", "high", "medium", "low"];
+        let runtimeQualityOverride = "";
+        let runtimeFpsWindowStart = performance.now();
+        let runtimeFpsFrames = 0;
+        let runtimeFpsLastDowngrade = 0;
 
         function readInitialQualityPreset() {
             try {
                 const params = new URLSearchParams(window.location.search);
                 const requested = params.get("quality") || localStorage.getItem("pouya-ai-quality-preset") || "auto";
-                return qualityPresetOptions.has(requested) ? requested : "auto";
+                return requested === "lowest" ? "low" : qualityPresetOptions.has(requested) ? requested : "auto";
             } catch (error) {
                 return "auto";
             }
@@ -112,8 +117,9 @@
 
         function persistQualityPreset(value) {
             try {
-                if (!qualityPresetOptions.has(value) || value === "auto") localStorage.removeItem("pouya-ai-quality-preset");
-                else localStorage.setItem("pouya-ai-quality-preset", value);
+                const normalized = value === "lowest" ? "low" : value;
+                if (!qualityPresetOptions.has(normalized) || normalized === "auto") localStorage.removeItem("pouya-ai-quality-preset");
+                else localStorage.setItem("pouya-ai-quality-preset", normalized);
             } catch (error) {
                 // Storage can be unavailable in private contexts; the in-memory setting still applies.
             }
@@ -158,6 +164,17 @@
             bull: "assets/models/achaemenid-bull-columns.glb",
             hourglass: "assets/models/hourglass.glb"
         };
+        const lowModelPaths = {
+            rug: "assets/models/optimized/fine-persian-heriz-carpet-low.glb",
+            lamp: "assets/models/optimized/alladins-lamp-low.glb",
+            globe: "assets/models/optimized/holographic-globe-uniform-detail-low.glb",
+            bull: "assets/models/optimized/achaemenid-bull-columns-low.glb",
+            hourglass: "assets/models/optimized/hourglass-low.glb"
+        };
+
+        function modelPath(assetId) {
+            return effectiveQualityPreset() === "low" && lowModelPaths[assetId] ? lowModelPaths[assetId] : modelPaths[assetId];
+        }
 
         const animationVideos = [
             { title: "Glimpse of the Future", stem: "animation-glimpse-future" },
@@ -178,15 +195,16 @@
 
         function effectiveQualityPreset() {
             const requested = visualSettings?.qualityPreset || "auto";
-            if (requested !== "auto") return qualityPresetOptions.has(requested) ? requested : "medium";
+            if (requested !== "auto") return requested === "lowest" ? "low" : qualityPresetOptions.has(requested) ? requested : "medium";
+            if (runtimeQualityOverride) return runtimeQualityOverride;
             const { memory, cores, mobile, capableMobile } = deviceCapabilityProfile();
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const reducedNetwork = Boolean(connection?.saveData) || ["slow-2g", "2g", "3g"].includes(connection?.effectiveType);
-            if (reducedNetwork || (memory > 0 && memory <= 2) || cores <= 2) return "lowest";
+            if (reducedNetwork || (memory > 0 && memory <= 2) || cores <= 2) return "low";
             if (mobile) {
                 if (capableMobile) return "medium";
                 if (memory >= 4 || cores >= 6) return "low";
-                return "lowest";
+                return "low";
             }
             if (prefersReducedMotion || (memory > 0 && memory <= 4)) return "low";
             if (memory >= 12 && window.innerWidth >= 1500) return "high";
@@ -195,7 +213,7 @@
         }
 
         function objectInteractionsEnabled() {
-            return effectiveQualityPreset() !== "lowest";
+            return true;
         }
 
         function preloadAnimationVideos(centerIndex = currentAnimationIndex || 0) {
@@ -456,6 +474,7 @@
         let transformControls = makeTransformControlsShim();
         let transformControlsReady = false;
         let transformControlsLoadPromise = null;
+        let editorRuntimePromise = null;
 
         async function ensureTransformControls() {
             if (transformControlsReady) return transformControls;
@@ -484,6 +503,44 @@
 
         function ensureDevControls() {
             return Promise.all([ensureOrbitControls(), ensureTransformControls()]);
+        }
+
+        function ensureEditorRuntime() {
+            editorRuntimePromise ||= import("./portfolio-editor-runtime.js").then(({ installEditorTimelineInteractions, installEditorKeyboardInteractions }) => {
+                installEditorTimelineInteractions({
+                    cameraTrack: timelineTrack,
+                    pageTrack: pageTimelineTrack,
+                    setCameraProgress: setCameraTimelineProgress,
+                    setPageProgress: setPageTimelineProgress,
+                    progressFromEvent: progressFromTimelineEvent
+                });
+                installEditorKeyboardInteractions({
+                    isDevEnabled: () => devModeEnabled,
+                    isSceneMode: () => sceneMode,
+                    setShiftDown: (active) => { shiftDown = active; },
+                    toggleSceneMode: () => setSceneMode(!sceneMode),
+                    toggleSettings: () => setSettingsOpen(!settingsOpen),
+                    togglePageEditor: () => setPageEditorMode(!pageEditorActive),
+                    togglePerformanceOverlay: () => {
+                        perfOverlayActive = !perfOverlayActive;
+                        document.body.classList.toggle("perf-overlay-active", perfOverlayActive);
+                        perfLastStamp = performance.now();
+                        perfFrames = 0;
+                    },
+                    setScenePageVisible,
+                    toggleSceneLayoutPreview: () => setSceneLayoutPreview(!sceneLayoutPreview),
+                    runUndo,
+                    runRedo,
+                    setTransformMode,
+                    deleteSelectedObject,
+                    closeSceneMode: () => setSceneMode(false),
+                    resizeTransformControl: (delta) => transformControls.setSize(Math.max(0.35, transformControls.size + delta))
+                });
+            }).catch((error) => {
+                editorRuntimePromise = null;
+                console.warn("Editor runtime failed to load.", error);
+            });
+            return editorRuntimePromise;
         }
 
         const titleGroup = new THREE.Group();
@@ -547,6 +604,9 @@
         let grabbedProjection = null;
         let draggedCarpet = null;
         let draggedCarpetNode = -1;
+        let activeInteractionPointerId = null;
+        let activeInteractionPointerTarget = null;
+        const activeTouchPointers = new Set();
         const carpetDragTarget = new THREE.Vector3();
         const carpetDragPlane = new THREE.Plane();
         let grabStartX = 0;
@@ -796,6 +856,8 @@
             const setting = getProjectSetting(projectKey);
             setting.color = colorValue;
             const color = hexToColor(colorValue);
+            projectCards.find((card) => card.dataset.projectCard === projectKey)
+                ?.style.setProperty("--project-title-glow", colorToRgbTriplet(color));
             assetObjects.forEach((object) => {
                 object.traverse((child) => {
                     if (child.material?.userData?.projectKey === projectKey && child.material.color) {
@@ -1072,6 +1134,7 @@
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         const gltfLoader = new GLTFLoader();
+        let meshoptDecoderPromise = null;
         const textureLoader = new THREE.TextureLoader();
 
         const spoutOrigin = new THREE.Vector3(2.04, -0.68, 0.42);
@@ -2845,6 +2908,7 @@ ${shader.fragmentShader}`
             const rug = assetObjects.get("rug");
             const data = rug?.userData?.carpet;
             if (!data || data.flat || !objectInteractionsEnabled() || !hit?.uv) return false;
+            beginPointerInteraction(event);
             draggedCarpet = data;
             draggedCarpetNode = Math.round(hit.uv.y * data.segX) + (data.segX + 1) * Math.round((1 - hit.uv.x) * data.segZ);
             draggedCarpetNode = Math.round(clamp(draggedCarpetNode, 0, data.curr.length / 3 - 1));
@@ -2881,6 +2945,35 @@ ${shader.fragmentShader}`
             return false;
         }
 
+        function beginPointerInteraction(event) {
+            activeInteractionPointerId = event.pointerId;
+            activeInteractionPointerTarget = event.target?.setPointerCapture ? event.target : null;
+            try {
+                activeInteractionPointerTarget?.setPointerCapture(event.pointerId);
+            } catch (error) {
+                activeInteractionPointerTarget = null;
+            }
+        }
+
+        function releasePointerInteraction(event = null, { force = false } = {}) {
+            if (event?.pointerType === "touch") activeTouchPointers.delete(event.pointerId);
+            if (force) activeTouchPointers.clear();
+            if (!force && activeInteractionPointerId !== null && event?.pointerId !== activeInteractionPointerId) return;
+            try {
+                if (activeInteractionPointerId !== null && activeInteractionPointerTarget?.hasPointerCapture?.(activeInteractionPointerId)) {
+                    activeInteractionPointerTarget.releasePointerCapture(activeInteractionPointerId);
+                }
+            } catch (error) {
+                // The pointer may already have been released by the browser.
+            }
+            draggedCarpet = null;
+            draggedCarpetNode = -1;
+            grabbedProjection = null;
+            activeInteractionPointerId = null;
+            activeInteractionPointerTarget = null;
+            document.body.style.cursor = hoveredInteractive ? "grab" : "";
+        }
+
         function maybeUnlockDevFromMobileCorners(event) {
             const mobilePointer = window.matchMedia("(pointer: coarse)").matches || event.pointerType === "touch";
             if (devModeEnabled || !mobilePointer) return false;
@@ -2909,11 +3002,19 @@ ${shader.fragmentShader}`
         }
 
         function onPointerDown(event) {
+            if (event.pointerType === "touch") {
+                activeTouchPointers.add(event.pointerId);
+                if (activeTouchPointers.size > 1) {
+                    releasePointerInteraction(null, { force: true });
+                    return;
+                }
+            }
             if (maybeUnlockDevFromMobileCorners(event)) return;
             if (objectInteractionsEnabled() && !sceneMode && currentEnvironmentOpacity > 0.2 && !event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock, #page-editor-panel, #page-timeline-dock, .page-editor-frame")) {
                 const hit = pickInteractiveProjection(event);
                 if (hit) {
                     event.preventDefault();
+                    beginPointerInteraction(event);
                     grabbedProjection = hit;
                     grabStartX = event.clientX;
                     grabStartY = event.clientY;
@@ -3195,7 +3296,17 @@ ${shader.fragmentShader}`
             lamp.add(proxy);
         }
 
+        async function ensureModelDecoder(path) {
+            if (!path.includes("/optimized/")) return;
+            meshoptDecoderPromise ||= import("three/addons/libs/meshopt_decoder.module.js").then(({ MeshoptDecoder }) => {
+                gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+                return MeshoptDecoder;
+            });
+            await meshoptDecoderPromise;
+        }
+
         async function loadGLB(path) {
+            await ensureModelDecoder(path);
             return new Promise((resolve, reject) => {
                 gltfLoader.load(path, (gltf) => resolve(gltf.scene), undefined, reject);
             });
@@ -3205,7 +3316,7 @@ ${shader.fragmentShader}`
 
         function requestHistoryAssetLoad() {
             if (assetObjects.has("bull") || historyAssetLoadPromise || effectiveQualityPreset() === "lowest") return;
-            historyAssetLoadPromise = loadGLB(modelPaths.bull)
+            historyAssetLoadPromise = loadGLB(modelPath("bull"))
                 .then((bullAsset) => {
                     stageBullAsset(bullAsset);
                     setStatus("Loaded history projection asset.");
@@ -3350,8 +3461,8 @@ ${shader.fragmentShader}`
                 }
 
                 const [lamp, globe, icosahedron, iran] = await Promise.all([
-                    loadGLB(modelPaths.lamp),
-                    loadGLB(modelPaths.globe),
+                    loadGLB(modelPath("lamp")),
+                    loadGLB(modelPath("globe")),
                     loadGLB(modelPaths.icosahedron),
                     loadGLB(modelPaths.iran)
                 ]);
@@ -3556,6 +3667,7 @@ ${shader.fragmentShader}`
                 setSettingsOpen(false);
                 setPageEditorMode(false);
             } else {
+                void ensureEditorRuntime();
                 void ensureDevControls().then(() => {
                     renderObjectList();
                     renderCameraKeyframes();
@@ -4609,6 +4721,8 @@ ${shader.fragmentShader}`
             projectCards.forEach((card) => {
                 const title = card.querySelector(".project-title");
                 const copy = card.querySelector(".project-copy");
+                const projectColor = new THREE.Color(projectSettings[card.dataset.projectCard]?.color || "#61f5ff");
+                card.style.setProperty("--project-title-glow", colorToRgbTriplet(projectColor));
                 if (title) title.style.fontFamily = titleFont;
                 if (copy) copy.style.fontFamily = bodyFont;
             });
@@ -5053,6 +5167,23 @@ ${shader.fragmentShader}`
             if (perfRug) perfRug.textContent = `${rugProfile.segX}x${rugProfile.segZ}${rugProfile.fringes ? " fringe" : " no fringe"}`;
         }
 
+        function monitorRuntimePerformance(now = performance.now()) {
+            runtimeFpsFrames += 1;
+            const elapsed = now - runtimeFpsWindowStart;
+            if (elapsed < 5200) return;
+            const fps = (runtimeFpsFrames * 1000) / Math.max(1, elapsed);
+            runtimeFpsFrames = 0;
+            runtimeFpsWindowStart = now;
+            if (visualSettings.qualityPreset !== "auto" || fps >= 34 || now - runtimeFpsLastDowngrade < 9000) return;
+            const current = effectiveQualityPreset();
+            const currentIndex = qualityDowngradeOrder.indexOf(current);
+            if (currentIndex < 0 || currentIndex >= qualityDowngradeOrder.length - 1) return;
+            runtimeQualityOverride = qualityDowngradeOrder[currentIndex + 1];
+            runtimeFpsLastDowngrade = now;
+            applyVisualSettings();
+            setStatus(`Auto quality reduced to ${runtimeQualityOverride} after sustained ${Math.round(fps)} FPS.`);
+        }
+
         function updateHourglassSand(elapsed) {
             const hourglass = assetObjects.get("hourglass");
             if (!hourglass) return;
@@ -5364,7 +5495,10 @@ ${shader.fragmentShader}`
                 if (key === "hologramOpacity") setProjectOpacity(visualSettings.selectedProject, Number(input.value));
                 if (key === "hologramSpin") getProjectSetting(visualSettings.selectedProject).spin = Number(input.value);
                 if (key === "blackholeNonOrbit") localStorage.setItem("pouya-ai-blackhole-video-choice", input.checked ? "nonOrbit" : "orbit");
-                if (key === "qualityPreset") persistQualityPreset(String(visualSettings[key]));
+                if (key === "qualityPreset") {
+                    runtimeQualityOverride = "";
+                    persistQualityPreset(String(visualSettings[key]));
+                }
                 if (input.dataset.rebuildCarpet === "true") rebuildFlyingCarpetFringes();
                 if (key.startsWith("hourglass") && !["hourglassGlassOpacity", "hourglassTint", "hourglassStreamThickness", "hourglassStreamOverlap", "hourglassTimerSeconds", "hourglassColumns"].includes(key)) rebuildImportedHourglass();
                 applyVisualSettings();
@@ -5425,42 +5559,6 @@ ${shader.fragmentShader}`
         cameraUpdateKeyframeBtn.addEventListener("click", () => updateSelectedCameraKeyframe());
         timelineExpandBtn?.addEventListener("click", () => cameraTimelineDock?.classList.toggle("expanded"));
         timelineAddKeyframeBtn?.addEventListener("click", addCameraKeyframe);
-        timelineTrack?.addEventListener("click", (event) => {
-            if (event.target.closest?.(".timeline-marker, .timeline-playhead, button")) return;
-            setCameraTimelineProgress(progressFromTimelineEvent(event, timelineTrack));
-        });
-        timelineTrack?.querySelector(".timeline-playhead")?.addEventListener("pointerdown", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const playhead = event.currentTarget;
-            playhead.setPointerCapture(event.pointerId);
-            const onMove = (moveEvent) => setCameraTimelineProgress(progressFromTimelineEvent(moveEvent, timelineTrack));
-            const onUp = () => {
-                playhead.removeEventListener("pointermove", onMove);
-                playhead.removeEventListener("pointerup", onUp);
-            };
-            onMove(event);
-            playhead.addEventListener("pointermove", onMove);
-            playhead.addEventListener("pointerup", onUp);
-        });
-        pageTimelineTrack?.addEventListener("click", (event) => {
-            if (event.target.closest?.(".page-timeline-chip, .timeline-playhead, button")) return;
-            setPageTimelineProgress(progressFromTimelineEvent(event, pageTimelineTrack));
-        });
-        pageTimelineTrack?.querySelector(".timeline-playhead")?.addEventListener("pointerdown", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const playhead = event.currentTarget;
-            playhead.setPointerCapture(event.pointerId);
-            const onMove = (moveEvent) => setPageTimelineProgress(progressFromTimelineEvent(moveEvent, pageTimelineTrack));
-            const onUp = () => {
-                playhead.removeEventListener("pointermove", onMove);
-                playhead.removeEventListener("pointerup", onUp);
-            };
-            onMove(event);
-            playhead.addEventListener("pointermove", onMove);
-            playhead.addEventListener("pointerup", onUp);
-        });
         cameraThirdPersonBtn.addEventListener("click", () => {
             cameraThirdPerson = !cameraThirdPerson;
             cameraThirdPersonBtn.classList.toggle("active", cameraThirdPerson);
@@ -5606,6 +5704,7 @@ ${shader.fragmentShader}`
         window.addEventListener("pointermove", (event) => {
             pointerTarget.x = (event.clientX / window.innerWidth - 0.5) * 2;
             pointerTarget.y = (event.clientY / window.innerHeight - 0.5) * 2;
+            if (activeInteractionPointerId !== null && event.pointerId !== activeInteractionPointerId) return;
             const interactiveUi = event.target.closest?.("a, button, input, textarea, select, label, #scene-hud, #camera-timeline-dock, #page-editor-panel, #page-timeline-dock, .page-editor-frame");
             if (!grabbedProjection && !sceneMode && currentEnvironmentOpacity > 0.2 && !interactiveUi && updateFlyingCarpetPointer(event)) {
                 if (draggedCarpet) event.preventDefault();
@@ -5667,15 +5766,15 @@ ${shader.fragmentShader}`
                 document.body.style.cursor = hoveredInteractive ? "grab" : "";
             }
         }, { passive: false });
-        window.addEventListener("pointerup", () => {
-            draggedCarpet = null;
-            draggedCarpetNode = -1;
-            grabbedProjection = null;
-            document.body.style.cursor = hoveredInteractive ? "grab" : "";
+        window.addEventListener("pointerup", releasePointerInteraction);
+        window.addEventListener("pointercancel", releasePointerInteraction);
+        window.addEventListener("lostpointercapture", releasePointerInteraction);
+        window.addEventListener("blur", () => releasePointerInteraction(null, { force: true }));
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) releasePointerInteraction(null, { force: true });
         });
         window.addEventListener("keydown", (event) => {
             const key = event.key.toLowerCase();
-            shiftDown = event.shiftKey;
             const editingField = event.target?.matches?.("input, textarea, select");
             const passiveControl = event.target?.matches?.("input[type='range'], input[type='checkbox'], input[type='color'], select");
             if (editingField && !passiveControl && !event.ctrlKey && !event.metaKey) return;
@@ -5683,53 +5782,6 @@ ${shader.fragmentShader}`
                 devUnlockBuffer = (devUnlockBuffer + key).slice(-5);
                 if (devUnlockBuffer === "pouya") setDevMode(!devModeEnabled);
             }
-            if (!devModeEnabled) return;
-            if (key === "h") {
-                event.preventDefault();
-                setSceneMode(!sceneMode);
-            }
-            if (key === "o") {
-                event.preventDefault();
-                setSettingsOpen(!settingsOpen);
-            }
-            if (key === "p") {
-                event.preventDefault();
-                setPageEditorMode(!pageEditorActive);
-            }
-            if (key === "l") {
-                event.preventDefault();
-                perfOverlayActive = !perfOverlayActive;
-                document.body.classList.toggle("perf-overlay-active", perfOverlayActive);
-                perfLastStamp = performance.now();
-                perfFrames = 0;
-            }
-            if (key === "v" && sceneMode) {
-                setScenePageVisible(true);
-            }
-            if (key === "k" && sceneMode) {
-                event.preventDefault();
-                setSceneLayoutPreview(!sceneLayoutPreview);
-            }
-            if ((event.ctrlKey || event.metaKey) && key === "z") {
-                event.preventDefault();
-                runUndo();
-            }
-            if ((event.ctrlKey || event.metaKey) && (key === "y" || (event.shiftKey && key === "z"))) {
-                event.preventDefault();
-                runRedo();
-            }
-            if (!sceneMode) return;
-            if (key === "w") setTransformMode("translate");
-            if (key === "e") setTransformMode("rotate");
-            if (key === "r") setTransformMode("scale");
-            if (key === "delete" || key === "backspace") deleteSelectedObject();
-            if (key === "escape") setSceneMode(false);
-            if (key === "+" || key === "=") transformControls.setSize(transformControls.size + 0.1);
-            if (key === "-" || key === "_") transformControls.setSize(Math.max(0.35, transformControls.size - 0.1));
-        });
-        window.addEventListener("keyup", (event) => {
-            shiftDown = event.shiftKey;
-            if (event.key.toLowerCase() === "v") setScenePageVisible(false);
         });
         window.addEventListener("resize", () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -5770,7 +5822,9 @@ ${shader.fragmentShader}`
         }, { passive: false });
 
         function animate() {
-            const elapsed = performance.now() * 0.001;
+            const now = performance.now();
+            const elapsed = now * 0.001;
+            monitorRuntimePerformance(now);
             const lowestQuality = effectiveQualityPreset() === "lowest";
             pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * 0.035;
             pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * 0.035;
@@ -5902,7 +5956,14 @@ ${shader.fragmentShader}`
             getPerformanceState: () => ({
                 requested: visualSettings.qualityPreset,
                 effective: effectiveQualityPreset(),
+                runtimeOverride: runtimeQualityOverride || null,
                 device: deviceCapabilityProfile()
+            }),
+            getInteractionState: () => ({
+                grabbed: grabbedProjection?.name || null,
+                carpetGrabbed: Boolean(draggedCarpet),
+                activePointerId: activeInteractionPointerId,
+                activeTouchPointers: [...activeTouchPointers]
             }),
             getCameraSequence: () => cameraKeyframes.map((keyframe) => ({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] })),
             setAnimationVideo,

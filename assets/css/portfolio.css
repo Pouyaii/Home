@@ -1602,32 +1602,70 @@
 
             .projection-copy-shell {
                 margin-inline: auto;
-                transform: translateY(0) perspective(900px) rotateY(var(--project-text-rotate-y));
+                transform: translateY(0);
                 transform-origin: center center;
             }
 
             .project-title {
                 font-size: var(--project-title-size);
+                text-shadow:
+                    0 0 12px rgba(var(--project-title-glow, 97, 245, 255), 0.72),
+                    0 0 28px rgba(var(--project-title-glow, 97, 245, 255), 0.42),
+                    0 10px 24px rgba(0, 0, 0, 0.68);
             }
 
             .projection-panel {
                 gap: var(--project-text-gap);
                 padding: 1rem;
                 max-height: calc(100svh - 5.5rem);
+                transform: translateY(var(--panel-y, 18px));
+                border-color: transparent !important;
+                background: transparent !important;
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+                box-shadow: none !important;
+            }
+
+            .projection-panel::before,
+            .projection-panel::after,
+            .about-panel::before,
+            .about-panel::after {
+                display: none !important;
+            }
+
+            .projection-panel .liquid-action {
+                transform: none !important;
+                box-shadow:
+                    inset 1px 1px 0 rgba(255, 255, 255, 0.32),
+                    inset 0 -12px 26px rgba(255, 255, 255, 0.06),
+                    0 16px 36px rgba(0, 0, 0, 0.32);
             }
 
             .project-copy {
                 line-height: 1.55;
                 color: rgba(255, 255, 255, 0.92);
+                text-shadow: 0 4px 14px rgba(0, 0, 0, 0.92);
             }
 
             .about-panel {
                 width: min(92vw, 680px);
                 color: rgba(255, 255, 255, 0.92);
+                border-color: transparent !important;
+                background: transparent !important;
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+                box-shadow: none !important;
+                text-shadow: 0 4px 14px rgba(0, 0, 0, 0.92);
             }
 
             .about-scroll-copy {
                 padding-inline: 0;
+                min-height: 258svh;
+                padding-bottom: 54svh;
+            }
+
+            .about-scroll-band {
+                min-height: 318svh;
             }
 
             .about-background-video {
@@ -1651,6 +1689,10 @@
 
             .about-panel[data-about-panel="2"] {
                 transform: translateY(var(--about-panel-2-y));
+            }
+
+            footer {
+                padding-top: 18svh !important;
             }
         }
 
