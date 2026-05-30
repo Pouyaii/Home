@@ -416,6 +416,11 @@
             background: transparent;
         }
 
+        body.nav-hidden .site-nav {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
         .nav-inner {
             min-height: 72px;
             border-radius: 14px;
@@ -1025,6 +1030,7 @@
         .projection-panel {
             grid-area: 1 / 1;
             display: grid;
+            align-self: center;
             gap: var(--project-text-gap);
             padding: clamp(1.25rem, 3vw, 2rem);
             border-radius: 14px;
@@ -1149,7 +1155,7 @@
         .project-actions {
             display: flex;
             flex-wrap: wrap;
-            align-items: stretch;
+            align-items: center;
             gap: 10px;
             align-self: start;
         }
@@ -1158,16 +1164,17 @@
         .project-actions .liquid-action {
             width: fit-content;
             min-width: 0;
-            min-height: 0;
-            height: auto;
+            min-height: 48px;
+            height: 48px;
             align-self: start;
-            padding-block: 0.76em;
+            padding-inline: 18px;
             line-height: 1;
+            font-size: 13px;
         }
 
         .liquid-action.icon-action {
-            width: 42px;
-            min-width: 42px;
+            width: 48px;
+            min-width: 48px;
             justify-content: center;
             padding-inline: 0;
             gap: 0;
@@ -1183,9 +1190,9 @@
         }
 
         .project-actions .liquid-action.icon-action {
-            align-self: stretch;
-            width: auto;
-            min-width: 0;
+            width: 48px;
+            min-width: 48px;
+            height: 48px;
         }
 
         .liquid-action {
@@ -1267,7 +1274,7 @@
         .about-scroll-band {
             position: relative;
             min-height: 260svh;
-            padding-block: 0;
+            padding: 0;
             overflow: clip;
             isolation: isolate;
         }
@@ -1615,16 +1622,35 @@
             }
 
             .about-panel {
-                background: transparent;
-                -webkit-backdrop-filter: none;
-                backdrop-filter: none;
-                box-shadow: none;
+                width: min(92vw, 680px);
                 color: rgba(255, 255, 255, 0.92);
             }
 
-            .about-panel::before,
-            .about-panel::after {
-                display: none;
+            .about-scroll-copy {
+                padding-inline: 0;
+            }
+
+            .about-background-video {
+                width: 116vw;
+                max-width: none;
+                margin-left: -8vw;
+            }
+
+            .about-panel[data-about-panel="0"],
+            .about-panel[data-about-panel="2"] {
+                margin-left: 0;
+                border-radius: 0 14px 14px 0;
+                transform: translateY(var(--about-panel-0-y));
+            }
+
+            .about-panel[data-about-panel="1"] {
+                margin-left: auto;
+                border-radius: 14px 0 0 14px;
+                transform: translateY(var(--about-panel-1-y));
+            }
+
+            .about-panel[data-about-panel="2"] {
+                transform: translateY(var(--about-panel-2-y));
             }
         }
 

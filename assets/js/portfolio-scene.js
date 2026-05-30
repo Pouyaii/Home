@@ -119,9 +119,22 @@
             }
         }
 
+        function deviceCapabilityProfile() {
+            const memory = navigator.deviceMemory || 0;
+            const cores = navigator.hardwareConcurrency || 4;
+            const coarse = window.matchMedia("(pointer: coarse)").matches;
+            const mobile = coarse || window.innerWidth < 760 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const capableMobile = mobile && (
+                (memory >= 6 && cores >= 6) ||
+                (memory >= 4 && cores >= 8) ||
+                (!navigator.deviceMemory && cores >= 6)
+            );
+            return { memory, cores, mobile, capableMobile };
+        }
+
         function preferredPixelRatio() {
             const dpr = window.devicePixelRatio || 1;
-            const memory = navigator.deviceMemory || 4;
+            const memory = deviceCapabilityProfile().memory || 4;
             const pixels = window.innerWidth * window.innerHeight;
             const highPixelViewport = pixels > 1920 * 1080;
             const quality = effectiveQualityPreset();
@@ -166,12 +179,16 @@
         function effectiveQualityPreset() {
             const requested = visualSettings?.qualityPreset || "auto";
             if (requested !== "auto") return qualityPresetOptions.has(requested) ? requested : "medium";
-            const memory = navigator.deviceMemory || 4;
+            const { memory, cores, mobile, capableMobile } = deviceCapabilityProfile();
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             const reducedNetwork = Boolean(connection?.saveData) || ["slow-2g", "2g", "3g"].includes(connection?.effectiveType);
-            const coarse = window.matchMedia("(pointer: coarse)").matches;
-            if (reducedNetwork || memory <= 2 || window.innerWidth < 520 || prefersReducedMotion) return "lowest";
-            if (reducedNetwork || memory <= 4 || coarse || window.innerWidth < 760) return "low";
+            if (reducedNetwork || (memory > 0 && memory <= 2) || cores <= 2) return "lowest";
+            if (mobile) {
+                if (capableMobile) return "medium";
+                if (memory >= 4 || cores >= 6) return "low";
+                return "lowest";
+            }
+            if (prefersReducedMotion || (memory > 0 && memory <= 4)) return "low";
             if (memory >= 12 && window.innerWidth >= 1500) return "high";
             if (memory >= 8 && window.innerWidth >= 1280) return "medium";
             return "medium";
@@ -253,7 +270,7 @@
             performanceParticles: 1,
             performanceRugDetail: 1,
             performanceShadows: true,
-            projectGlassPlane: window.matchMedia("(max-width: 760px)").matches ? false : true,
+            projectGlassPlane: true,
             projectFontPreset: "playfair",
             projectTitleSize: 37,
             projectBodySize: 17,
@@ -478,7 +495,7 @@
         scene.add(environmentGroup);
 
         const projectionStage = new THREE.Group();
-        projectionStage.name = "Genie Projection Stage";
+        projectionStage.name = "Project Stage";
         environmentGroup.add(projectionStage);
 
         const editableRoot = new THREE.Group();
@@ -496,6 +513,14 @@
         const redoStack = [];
         const cameraKeyframes = [];
         const defaultCameraKeyframes = [{"time":0,"project":"geo","position":[-1.3388356455678396,2.318299550152833,7.757070538703596],"target":[1.7800000000000002,0.5468,0.047200000000000006]},{"time":0.09712230215827339,"project":"geo","position":[3.5577044357761505,1.8077719926915148,9.213676774938596],"target":[1.7800000000000002,0.5468,0.047200000000000006]},{"time":0.2302158273381295,"project":"iran","position":[6.475943857541054,2.148476733207479,-5.789316327895974],"target":[2.6653201149928134,0.5507657557824456,0.6914155352357116]},{"time":0.3105515587529976,"project":"iran","position":[-3.9758131077091257,2.2792940757538327,-3.669673191694088],"target":[2.7440438274587935,0.77511288612861,-0.16393790555797638]},{"time":0.387,"project":"history","position":[-3.048295183166745,1.5897251292444605,4.410159494275501],"target":[2.8318531944421994,1.0253523487143392,-1.1180093261052388]},{"time":0.592,"project":"timeline","position":[5.908335597003093,5.772866705867747,-1.6057663738759864],"target":[2.0051865772202566,1.77202907047011,0.5176366684245781]},{"time":0.6966426858513189,"project":"timeline","position":[-5.587973029527567,3.4601515089094965,-8.1517279614401],"target":[2.0051865772202566,1.77202907047011,0.5176366684245781]},{"time":0.7577937649880095,"project":"timeline","position":[-7.757096960455764,3.342787609231923,6.700543818986134],"target":[1.6738873484695593,1.788869991029308,0.04429951255453572]},{"time":0.8405275779376499,"project":"animations","position":[1.092017159632582,3.9791507065310325,9.526161669786013],"target":[1.1641208046317293,2.2926366858410514,0.19060862308492743]},{"time":0.994,"project":"animations","position":[17.338368238461996,2.236206461366132,9.771657016464822],"target":[1.3193382350701885,1.2689991671523897,0.6068869711346812]}];
+        const mobileDefaultCameraKeyframes = [
+            { time: 0, project: "geo", position: [-1.7050619280611667, 2.1576350799596753, 12.372100926258154], target: [0.969228835982101, -0.7431213061411635, 0.1750916532216472] },
+            { time: 0.2, project: "iran", position: [9.664245797799687, 4.598921579645133, 11.745001232921837], target: [1.0276518306392683, -0.4666624008900394, 0.6407762320212628] },
+            { time: 0.4, project: "history", position: [11.503138707695461, 1.3061601169038017, 2.2386826010974286], target: [2.5461750080682095, -0.14694887952181795, 1.4036836781833335] },
+            { time: 0.6, project: "timeline", position: [14.585349292368797, 0.360448810035354, 4.238936731003878], target: [1.9690150567917446, -0.41779690170461814, 1.3289441795037182] },
+            { time: 0.8, project: "animations", position: [0.43705493947790686, 2.8910937108650074, 11.007094607135345], target: [1.2799088755592176, 0.7951259550813465, 1.1654222588017318] },
+            { time: 1, project: "animations", position: [-5.954362701366389, 2.959029055953651, 7.86951327281161], target: [1.2799088755592174, 0.7951259550813466, 1.1654222588017322] }
+        ];
         let selectedObject = null;
         let snapEnabled = false;
         let sceneMode = false;
@@ -4185,6 +4210,7 @@ ${shader.fragmentShader}`
             document.documentElement.style.setProperty("--environment-shift", sceneMode ? "0px" : `${(entryShift - exitShift).toFixed(1)}px`);
             environmentGroup.position.y = sceneMode ? 0 : -(1 - projectionEntryProgress) * 4.7 + projectionExitProgress * 5.1;
             document.documentElement.style.setProperty("--nav-opacity", navOpacity.toFixed(3));
+            document.body.classList.toggle("nav-hidden", navOpacity < 0.05);
             document.documentElement.style.setProperty("--projection-progress", currentProjectionProgress.toFixed(3));
             document.documentElement.style.setProperty("--timeline-progress", currentProjectionProgress.toFixed(3));
             pageTimelineTrack?.style.setProperty("--page-progress", (y / maxPageScroll()).toFixed(3));
@@ -4219,10 +4245,6 @@ ${shader.fragmentShader}`
                 document.documentElement.style.setProperty(`--about-panel-${index}-y`, `${(18 + (1 - eased) * 36).toFixed(1)}px`);
             });
             if (aboutVideo) {
-                if (effectiveQualityPreset() === "lowest") {
-                    aboutVideo.pause();
-                    return;
-                }
                 aboutVideo.playbackRate = 0.35 + smootherstep(progress) * 2.15;
                 if (fade > 0.08) aboutVideo.play().catch(() => {});
                 else aboutVideo.pause();
@@ -5877,6 +5899,12 @@ ${shader.fragmentShader}`
             animationsCenter,
             projectSettings,
             visualSettings,
+            getPerformanceState: () => ({
+                requested: visualSettings.qualityPreset,
+                effective: effectiveQualityPreset(),
+                device: deviceCapabilityProfile()
+            }),
+            getCameraSequence: () => cameraKeyframes.map((keyframe) => ({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] })),
             setAnimationVideo,
             getAnimationState: () => ({
                 currentAnimationIndex,
@@ -5905,7 +5933,8 @@ ${shader.fragmentShader}`
             }
         }
         if (!cameraKeyframes.length) {
-            defaultCameraKeyframes.forEach((keyframe) => cameraKeyframes.push({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] }));
+            const initialCameraKeyframes = deviceCapabilityProfile().mobile ? mobileDefaultCameraKeyframes : defaultCameraKeyframes;
+            initialCameraKeyframes.forEach((keyframe) => cameraKeyframes.push({ ...keyframe, position: [...keyframe.position], target: [...keyframe.target] }));
             selectedCameraKeyframe = 0;
         }
         if (cameraEasing) cameraEasing.value = "smooth-flow";
