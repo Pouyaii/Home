@@ -212,7 +212,8 @@
         }
 
         body:not(.dev-mode-enabled) #scene-toggle,
-        body:not(.dev-mode-enabled) #settings-toggle {
+        body:not(.dev-mode-enabled) #settings-toggle,
+        body:not(.dev-mode-enabled) #page-editor-toggle {
             opacity: 0;
             pointer-events: none;
             transform: translateY(12px);
@@ -276,6 +277,8 @@
         body.scene-mode-active .site-shell,
         body.scene-mode-active .site-nav,
         body.scene-mode-active #scene-toggle,
+        body.scene-mode-active #settings-toggle,
+        body.scene-mode-active #page-editor-toggle,
         body.scene-mode-active .blackhole-lens {
             opacity: 0;
             pointer-events: none;
@@ -452,10 +455,10 @@
             letter-spacing: 0;
         }
 
-        #settings-toggle {
+        #settings-toggle,
+        #page-editor-toggle {
             position: fixed;
             right: 18px;
-            bottom: 68px;
             z-index: 30;
             min-height: 38px;
             padding: 0 11px;
@@ -467,6 +470,14 @@
             font-size: 12px;
             font-weight: 780;
             letter-spacing: 0;
+        }
+
+        #settings-toggle {
+            bottom: 68px;
+        }
+
+        #page-editor-toggle {
+            bottom: 114px;
         }
 
         kbd {
@@ -1602,7 +1613,7 @@
 
             .projection-copy-shell {
                 margin-inline: auto;
-                transform: translateY(0);
+                transform: translateY(0) perspective(900px) rotateY(var(--project-text-rotate-y));
                 transform-origin: center center;
             }
 
@@ -1627,9 +1638,7 @@
             }
 
             .projection-panel::before,
-            .projection-panel::after,
-            .about-panel::before,
-            .about-panel::after {
+            .projection-panel::after {
                 display: none !important;
             }
 
@@ -1650,11 +1659,6 @@
             .about-panel {
                 width: min(92vw, 680px);
                 color: rgba(255, 255, 255, 0.92);
-                border-color: transparent !important;
-                background: transparent !important;
-                -webkit-backdrop-filter: none !important;
-                backdrop-filter: none !important;
-                box-shadow: none !important;
                 text-shadow: 0 4px 14px rgba(0, 0, 0, 0.92);
             }
 

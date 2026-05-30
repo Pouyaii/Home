@@ -5,6 +5,7 @@
         const statusEl = document.querySelector("#scene-status");
         const sceneToggle = document.querySelector("#scene-toggle");
         const settingsToggle = document.querySelector("#settings-toggle");
+        const pageEditorToggle = document.querySelector("#page-editor-toggle");
         const sceneCloseBtn = document.querySelector("#scene-close-btn");
         const translateBtn = document.querySelector("#translate-btn");
         const rotateBtn = document.querySelector("#rotate-btn");
@@ -4130,6 +4131,7 @@ ${shader.fragmentShader}`
             if (active && !devModeEnabled) return;
             pageEditorActive = active;
             document.body.classList.toggle("page-editor-active", active);
+            pageEditorToggle?.setAttribute("aria-pressed", String(active));
             if (active) {
                 setSceneMode(false);
                 setSettingsOpen(false);
@@ -5471,6 +5473,10 @@ ${shader.fragmentShader}`
         settingsToggle?.addEventListener("click", () => {
             if (!devModeEnabled) return;
             setSettingsOpen(!settingsOpen);
+        });
+        pageEditorToggle?.addEventListener("click", () => {
+            if (!devModeEnabled) return;
+            setPageEditorMode(!pageEditorActive);
         });
         sceneCloseBtn.addEventListener("click", () => {
             if (settingsOpen && !sceneMode) setSettingsOpen(false);
